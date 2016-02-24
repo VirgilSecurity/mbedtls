@@ -41,6 +41,10 @@
 #include "mbedtls/ecdsa.h"
 #endif
 
+#if defined(MBEDTLS_ECIES_C)
+#include "mbedtls/ecies.h"
+#endif
+
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
 #else
@@ -241,6 +245,28 @@ static int eckey_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
 
 #endif /* MBEDTLS_ECDSA_C */
 
+#if defined(MBEDTLS_ECIES_C)
+
+static int eckey_encrypt_wrap(void *ctx,
+                    const unsigned char *input, size_t ilen,
+                    unsigned char *output, size_t *olen, size_t osize,
+                    int (*f_rng)(void *, unsigned char *, size_t), void *p_rng)
+{
+    return mbedtls_ecies_encrypt( (mbedtls_ecp_keypair *)ctx, input, ilen, output, olen, osize,
+                          f_rng, p_rng );
+}
+
+static int eckey_decrypt_wrap(void *ctx,
+                    const unsigned char *input, size_t ilen,
+                    unsigned char *output, size_t *olen, size_t osize,
+                    int (*f_rng)(void *, unsigned char *, size_t), void *p_rng)
+{
+    return mbedtls_ecies_decrypt( (mbedtls_ecp_keypair *)ctx, input, ilen, output, olen, osize,
+                          f_rng, p_rng );
+}
+
+#endif /* MBEDTLS_ECIES_C */
+
 static int eckey_check_pair( const void *pub, const void *prv )
 {
     return( mbedtls_ecp_check_pub_priv( (const mbedtls_ecp_keypair *) pub,
@@ -282,8 +308,13 @@ const mbedtls_pk_info_t mbedtls_eckey_info = {
     NULL,
     NULL,
 #endif
+#if defined(MBEDTLS_ECIES_C)
+    eckey_decrypt_wrap,
+    eckey_encrypt_wrap,
+#else
     NULL,
     NULL,
+#endif
     eckey_check_pair,
     eckey_alloc_wrap,
     eckey_free_wrap,
@@ -306,8 +337,13 @@ const mbedtls_pk_info_t mbedtls_eckeydh_info = {
     eckeydh_can_do,
     NULL,
     NULL,
+#if defined(MBEDTLS_ECIES_C)
+    eckey_decrypt_wrap,
+    eckey_encrypt_wrap,
+#else
     NULL,
     NULL,
+#endif
     eckey_check_pair,
     eckey_alloc_wrap,       /* Same underlying key structure */
     eckey_free_wrap,        /* Same underlying key structure */
@@ -369,8 +405,13 @@ const mbedtls_pk_info_t mbedtls_ecdsa_info = {
     ecdsa_can_do,
     ecdsa_verify_wrap,
     ecdsa_sign_wrap,
+#if defined(MBEDTLS_ECIES_C)
+    eckey_decrypt_wrap,
+    eckey_encrypt_wrap,
+#else
     NULL,
     NULL,
+#endif
     eckey_check_pair,   /* Compatible key structures */
     ecdsa_alloc_wrap,
     ecdsa_free_wrap,

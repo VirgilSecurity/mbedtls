@@ -1879,6 +1879,42 @@
 #define MBEDTLS_MD5_C
 
 /**
+ * \def MBEDTLS_KDF_C
+ *
+ * Enable the generic key derivation layer.
+ *
+ * Module:  library/kdf.c
+ * Caller:
+ *
+ * Uncomment to enable generic key derivation wrappers.
+ */
+#define MBEDTLS_KDF_C
+
+/**
+ * \def MBEDTLS_KDF1_C
+ *
+ * Enable the KDF1 key derivation algorithm.
+ *
+ * Module:  library/kdf1.c
+ * Caller:
+ *
+ * This module adds support for KDF1 (ISO-18033-2) algorithm.
+ */
+#define MBEDTLS_KDF1_C
+
+/**
+ * \def MBEDTLS_KDF2_C
+ *
+ * Enable the KDF2 key derivation algorithm.
+ *
+ * Module:  library/kdf2.c
+ * Caller:
+ *
+ * This module adds support for KDF2 (ISO-18033-2) algorithm.
+ */
+#define MBEDTLS_KDF2_C
+
+/**
  * \def MBEDTLS_MEMORY_BUFFER_ALLOC_C
  *
  * Enable the buffer allocator implementation that makes use of a (stack)
@@ -2022,6 +2058,20 @@
 #define MBEDTLS_PK_WRITE_C
 
 /**
+ * \def MBEDTLS_PK_WRITE_PKCS8_C
+ *
+ * Add functions to write private key in the PKCS#8 structure.
+ *
+ * Module:  library/pkwrite.c
+ *
+ * Requires: MBEDTLS_PK_C, MBEDTLS_PK_WRITE_C
+ *
+ * Uncomment to be able use functions which write private key
+ * in the PKCS#8 structure.
+ */
+#define MBEDTLS_PK_WRITE_PKCS8_C
+
+/**
  * \def MBEDTLS_PKCS5_C
  *
  * Enable PKCS#5 functions.
@@ -2113,6 +2163,18 @@
  * Requires: MBEDTLS_BIGNUM_C, MBEDTLS_OID_C
  */
 #define MBEDTLS_RSA_C
+
+/**
+ * \def MBEDTLS_ECIES_C
+ *
+ * Enable the elliptic curve ECIES algorithms.
+ *
+ * Module:  library/ecies.c
+ *
+ * Requires: MBEDTLS_PK_C, MBEDTLS_ECDH_C, MBEDTLS_CIPHER_C,
+ *           MBEDTLS_MD_C, MBEDTLS_KDF_C, MBEDTLS_OID_C
+ */
+#define MBEDTLS_ECIES_C
 
 /**
  * \def MBEDTLS_SHA1_C

@@ -526,6 +526,29 @@ int mbedtls_pk_parse_public_keyfile( mbedtls_pk_context *ctx, const char *path )
  */
 int mbedtls_pk_write_key_der( mbedtls_pk_context *ctx, unsigned char *buf, size_t size );
 
+#if defined(MBEDTLS_PK_WRITE_PKCS8_C)
+/**
+ * \brief           Write a private key to a PKCS#8 structure
+ *                  Note: data is written at the end of the buffer! Use the
+ *                        return value to determine where you should start
+ *                        using the buffer
+ *
+ * \param ctx       private to write away
+ * \param buf       buffer to write to
+ * \param size      size of the buffer
+ * \param pwd       password for encryption (can be NULL)
+ * \param pwdlen    size of the password (can be 0)
+ * \param pbe       the ASN.1 AlgorithmIdentifier of PBE (can be NULL, if pwd NULL or pwdlen == 0)
+ * \param pbelen    size of the pbe (can be 0, if pne NULL)
+ *
+ * \return          length of data written if successful, or a specific
+ *                  error code
+ */
+int mbedtls_pk_write_key_pkcs8_der( mbedtls_pk_context *ctx, unsigned char *buf, size_t size,
+                                    const unsigned char *pwd, size_t pwdlen,
+                                    const unsigned char *pbe, size_t pbelen );
+#endif /* MBEDTLS_PK_WRITE_PKCS8_C */
+
 /**
  * \brief           Write a public key to a SubjectPublicKeyInfo DER structure
  *                  Note: data is written at the end of the buffer! Use the
@@ -563,6 +586,29 @@ int mbedtls_pk_write_pubkey_pem( mbedtls_pk_context *ctx, unsigned char *buf, si
  * \return          0 if successful, or a specific error code
  */
 int mbedtls_pk_write_key_pem( mbedtls_pk_context *ctx, unsigned char *buf, size_t size );
+
+#if defined(MBEDTLS_PK_WRITE_PKCS8_C)
+/**
+ * \brief           Write a private key to a PKCS#8 PEM string
+ *                  Note: data is written at the end of the buffer! Use the
+ *                        return value to determine where you should start
+ *                        using the buffer
+ *
+ * \param ctx       private to write away
+ * \param buf       buffer to write to
+ * \param size      size of the buffer
+ * \param pwd       password for encryption (can be NULL)
+ * \param pwdlen    size of the password (can be 0)
+ * \param pbe       the ASN.1 AlgorithmIdentifier of PBE (can be NULL, if pwd NULL or pwdlen == 0)
+ * \param pbelen    size of the pbe (can be 0, if pne NULL)
+ *
+ * \return          length of data written if successful, or a specific
+ *                  error code
+ */
+int mbedtls_pk_write_key_pkcs8_pem( mbedtls_pk_context *ctx, unsigned char *buf, size_t size,
+                                    const unsigned char *pwd, size_t pwdlen,
+                                    const unsigned char *pbe, size_t pbelen );
+#endif /* MBEDTLS_PK_WRITE_PKCS8_C */
 #endif /* MBEDTLS_PEM_WRITE_C */
 #endif /* MBEDTLS_PK_WRITE_C */
 

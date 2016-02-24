@@ -504,6 +504,30 @@ static const oid_cipher_alg_t oid_cipher_alg[] =
         MBEDTLS_CIPHER_DES_EDE3_CBC,
     },
     {
+        { ADD_LEN( MBEDTLS_OID_AES_128_CBC ),          "aes128-CBC", "AES-128-CBC" },
+        MBEDTLS_CIPHER_AES_128_CBC,
+    },
+    {
+        { ADD_LEN( MBEDTLS_OID_AES_192_CBC ),          "aes192-CBC", "AES-192-CBC" },
+        MBEDTLS_CIPHER_AES_192_CBC,
+    },
+    {
+        { ADD_LEN( MBEDTLS_OID_AES_256_CBC ),          "aes256-CBC", "AES-256-CBC" },
+        MBEDTLS_CIPHER_AES_256_CBC,
+    },
+    {
+        { ADD_LEN( MBEDTLS_OID_AES_128_GCM ),          "aes128-GCM", "AES-128-GCM" },
+        MBEDTLS_CIPHER_AES_128_GCM,
+    },
+    {
+        { ADD_LEN( MBEDTLS_OID_AES_192_GCM ),          "aes192-GCM", "AES-192-GCM" },
+        MBEDTLS_CIPHER_AES_192_GCM,
+    },
+    {
+        { ADD_LEN( MBEDTLS_OID_AES_256_GCM ),          "aes256-GCM", "AES-256-GCM" },
+        MBEDTLS_CIPHER_AES_256_GCM,
+    },
+    {
         { NULL, 0, NULL, NULL },
         MBEDTLS_CIPHER_NONE,
     },
@@ -511,6 +535,7 @@ static const oid_cipher_alg_t oid_cipher_alg[] =
 
 FN_OID_TYPED_FROM_ASN1(oid_cipher_alg_t, cipher_alg, oid_cipher_alg)
 FN_OID_GET_ATTR1(mbedtls_oid_get_cipher_alg, oid_cipher_alg_t, cipher_alg, mbedtls_cipher_type_t, cipher_alg)
+FN_OID_GET_OID_BY_ATTR1(mbedtls_oid_get_oid_by_cipher_alg, oid_cipher_alg_t, oid_cipher_alg, mbedtls_cipher_type_t, cipher_alg)
 #endif /* MBEDTLS_CIPHER_C */
 
 #if defined(MBEDTLS_MD_C)
@@ -596,6 +621,36 @@ static const oid_pkcs12_pbe_alg_t oid_pkcs12_pbe_alg[] =
 FN_OID_TYPED_FROM_ASN1(oid_pkcs12_pbe_alg_t, pkcs12_pbe_alg, oid_pkcs12_pbe_alg)
 FN_OID_GET_ATTR2(mbedtls_oid_get_pkcs12_pbe_alg, oid_pkcs12_pbe_alg_t, pkcs12_pbe_alg, mbedtls_md_type_t, md_alg, mbedtls_cipher_type_t, cipher_alg)
 #endif /* MBEDTLS_PKCS12_C */
+
+#if defined(MBEDTLS_KDF_C)
+/*
+ * For key derivation algorithm
+ */
+typedef struct {
+    mbedtls_oid_descriptor_t    descriptor;
+    mbedtls_kdf_type_t          kdf_alg;
+} oid_kdf_alg_t;
+
+static const oid_kdf_alg_t oid_kdf_alg[] =
+{
+    {
+        { ADD_LEN( MBEDTLS_OID_ISO_KDF1 ),       "id-kdf-kdf1",       "KDF1" },
+        MBEDTLS_KDF_KDF1,
+    },
+    {
+        { ADD_LEN( MBEDTLS_OID_ISO_KDF2 ),       "id-kdf-kdf2",       "KDF2" },
+        MBEDTLS_KDF_KDF2,
+    },
+    {
+        { NULL, 0, NULL, NULL },
+        0,
+    },
+};
+
+FN_OID_TYPED_FROM_ASN1(oid_kdf_alg_t, kdf_alg, oid_kdf_alg);
+FN_OID_GET_ATTR1(mbedtls_oid_get_kdf_alg, oid_kdf_alg_t, kdf_alg, mbedtls_kdf_type_t, kdf_alg);
+FN_OID_GET_OID_BY_ATTR1(mbedtls_oid_get_oid_by_kdf_alg, oid_kdf_alg_t, oid_kdf_alg, mbedtls_kdf_type_t, kdf_alg);
+#endif /* MBEDTLS_KDF_C */
 
 #define OID_SAFE_SNPRINTF                               \
     do {                                                \

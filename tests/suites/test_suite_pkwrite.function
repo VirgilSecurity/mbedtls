@@ -72,3 +72,42 @@ exit:
     mbedtls_pk_free( &key );
 }
 /* END_CASE */
+
+/* BEGIN_CASE depends_on:MBEDTLS_PEM_WRITE_C:MBEDTLS_PK_WRITE_PKCS8_C */
+void pk_write_key_pkcs8_check( char *key_file, char *pwd, char *pbe_hex )
+{
+    mbedtls_pk_context key;
+    unsigned char buf[5000];
+    unsigned char check_buf[5000];
+    int ret;
+    FILE *f;
+    size_t ilen;
+    unsigned char *pbe = NULL;
+    size_t pbelen;
+
+    memset( buf, 0, sizeof( buf ) );
+    memset( check_buf, 0, sizeof( check_buf ) );
+
+    mbedtls_pk_init( &key );
+    TEST_ASSERT( mbedtls_pk_parse_keyfile( &key, key_file, pwd ) == 0 );
+
+    pbe = unhexify_alloc( pbe_hex, &pbelen );
+
+    ret = mbedtls_pk_write_key_pkcs8_pem( &key, buf, sizeof( buf ) - 1,
+            (const unsigned char *)pwd, strlen(pwd), pbe, pbelen );
+    TEST_ASSERT( ret >= 0 );
+
+    f = fopen( key_file, "r" );
+    TEST_ASSERT( f != NULL );
+    ilen = fread( check_buf, 1, sizeof( check_buf ) - 1, f );
+    fclose( f );
+
+    TEST_ASSERT( ilen == strlen( (char *) buf ) );
+    TEST_ASSERT( memcmp( (char *) buf, (char *) check_buf, ilen ) == 0 );
+
+exit:
+    mbedtls_pk_free( &key );
+    mbedtls_free( pbe );
+}
+/* END_CASE */
+

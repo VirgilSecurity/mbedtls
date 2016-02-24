@@ -4,6 +4,7 @@
 /* For error codes */
 #include "mbedtls/ecp.h"
 #include "mbedtls/rsa.h"
+#include "mbedtls/ecies.h"
 
 static int rnd_std_rand( void *rng_state, unsigned char *output, size_t len );
 
@@ -384,31 +385,68 @@ exit:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void pk_ec_nocrypt( int type )
+void pk_ec_encrypt_decrypt( int type, char *msg_string,
+        int enc_len, int dec_len, int err )
 {
+    int ret = 0;
     mbedtls_pk_context pk;
-    unsigned char output[100];
-    unsigned char input[100];
-    rnd_pseudo_info rnd_info;
-    size_t olen = 0;
-    int ret = MBEDTLS_ERR_PK_TYPE_MISMATCH;
+
+    unsigned char msg[1000];
+    unsigned char enc_msg[4000];
+    unsigned char dec_msg[1000];
+    size_t msg_len = strlen( msg_string );
+    size_t enc_msg_len = 0;
+    size_t dec_msg_len = 0;
+    size_t enc_buf_len = (size_t)enc_len;
+    size_t dec_buf_len = (size_t)dec_len;
+
+    TEST_ASSERT( enc_buf_len <= sizeof( enc_msg ) );
+    TEST_ASSERT( dec_buf_len <= sizeof( dec_msg ) );
+
+    memset( msg,      0, sizeof( msg ) );
+    memset( enc_msg,  0, sizeof( enc_msg ) );
+    memset( dec_msg,  0, sizeof( dec_msg ) );
+
+    memcpy( msg, msg_string, msg_len );
 
     mbedtls_pk_init( &pk );
-
-    memset( &rnd_info,  0, sizeof( rnd_pseudo_info ) );
-    memset( output,     0, sizeof( output ) );
-    memset( input,      0, sizeof( input ) );
-
     TEST_ASSERT( mbedtls_pk_setup( &pk, mbedtls_pk_info_from_type( type ) ) == 0 );
+    TEST_ASSERT( pk_genkey( &pk ) == 0 );
 
-    TEST_ASSERT( mbedtls_pk_encrypt( &pk, input, sizeof( input ),
-                             output, &olen, sizeof( output ),
-                             rnd_pseudo_rand, &rnd_info ) == ret );
+    ret = mbedtls_pk_encrypt( &pk, msg, msg_len,
+                      enc_msg, &enc_msg_len, enc_buf_len,
+                      rnd_std_rand, NULL );
 
-    TEST_ASSERT( mbedtls_pk_decrypt( &pk, input, sizeof( input ),
-                             output, &olen, sizeof( output ),
-                             rnd_pseudo_rand, &rnd_info ) == ret );
+    if ( err != 0 && ret != 0 )
+    {
+        TEST_ASSERT( ( ret & err ) == err );
+        goto exit;
+    }
+    else
+    {
+        TEST_ASSERT( ret == 0 && "pk_encrypt failed" );
+    }
 
+    TEST_ASSERT( enc_msg_len > msg_len );
+
+    ret = mbedtls_pk_decrypt( &pk, enc_msg, enc_msg_len,
+                      dec_msg, &dec_msg_len, dec_buf_len,
+                      rnd_std_rand, NULL );
+
+    if ( err != 0 && ret != 0 )
+    {
+        TEST_ASSERT( ( ret & err ) == err );
+        goto exit;
+    }
+    else
+    {
+        TEST_ASSERT( ret == 0 && "pk_decrypt failed" );
+    }
+
+    TEST_ASSERT( dec_msg_len == msg_len );
+    TEST_ASSERT( memcmp( msg, dec_msg, msg_len ) == 0 );
+
+    TEST_ASSERT( ( err ^ ret ) == 0 );
 exit:
     mbedtls_pk_free( &pk );
 }

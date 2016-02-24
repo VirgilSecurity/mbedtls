@@ -66,6 +66,8 @@
  * PBKDF2    1  0x007C-0x007C
  * HMAC_DRBG 4  0x0003-0x0009
  * CCM       2                  0x000D-0x000F
+ * KDF1      1                  0x0031-0x0031
+ * KDF2      1                  0x0033-0x0033
  *
  * High-level module nr (3 bits - 0x0...-0x7...)
  * Name      ID  Nr of Errors
@@ -77,7 +79,9 @@
  * PK        3   14 (Started from top)
  * RSA       4   9
  * ECP       4   8 (Started from top)
+ * ECIES     4   4 (Started from top after ECP)
  * MD        5   4
+ * KDF       5   1 (Started from top)
  * CIPHER    6   6
  * SSL       6   17 (Started from top)
  * SSL       7   31

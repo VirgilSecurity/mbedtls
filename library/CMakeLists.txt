@@ -55,6 +55,12 @@ set(src_crypto
     version.c
     version_features.c
     xtea.c
+    kdf.c
+    kdf1.c
+    kdf2.c
+    kdf_wrap.c
+    ecies.c
+    ecies_envelope.c
 )
 
 set(src_x509

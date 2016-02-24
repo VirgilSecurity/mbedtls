@@ -46,12 +46,17 @@
 #include "x509.h"
 #endif
 
+#if defined(MBEDTLS_KDF_C)
+#include "kdf.h"
+#endif
+
 #define MBEDTLS_ERR_OID_NOT_FOUND                         -0x002E  /**< OID is not found. */
 #define MBEDTLS_ERR_OID_BUF_TOO_SMALL                     -0x000B  /**< output buffer is too small */
 
 /*
  * Top level OID tuples
  */
+#define MBEDTLS_OID_ISO_STANDARD                "\x28"
 #define MBEDTLS_OID_ISO_MEMBER_BODIES           "\x2a"          /* {iso(1) member-body(2)} */
 #define MBEDTLS_OID_ISO_IDENTIFIED_ORG          "\x2b"          /* {iso(1) identified-organization(3)} */
 #define MBEDTLS_OID_ISO_CCITT_DS                "\x55"          /* {joint-iso-ccitt(2) ds(5)} */
@@ -226,12 +231,22 @@
 #define MBEDTLS_OID_DIGEST_ALG_SHA512           MBEDTLS_OID_GOV "\x03\x04\x02\x03" /**< id-mbedtls_sha512 OBJECT IDENTIFIER ::= { joint-iso-itu-t(2) country(16) us(840) organization(1) gov(101) csor(3) nistalgorithm(4) hashalgs(2) 3 } */
 
 #define MBEDTLS_OID_HMAC_SHA1                   MBEDTLS_OID_RSA_COMPANY "\x02\x07" /**< id-hmacWithSHA1 OBJECT IDENTIFIER ::= { iso(1) member-body(2) us(840) rsadsi(113549) digestAlgorithm(2) 7 } */
+#define MBEDTLS_OID_HMAC_SHA224                 MBEDTLS_OID_RSA_COMPANY "\x02\x08" /**< id-hmacWithSHA1 OBJECT IDENTIFIER ::= { iso(1) member-body(2) us(840) rsadsi(113549) digestAlgorithm(2) 8 } */
+#define MBEDTLS_OID_HMAC_SHA256                 MBEDTLS_OID_RSA_COMPANY "\x02\x09" /**< id-hmacWithSHA1 OBJECT IDENTIFIER ::= { iso(1) member-body(2) us(840) rsadsi(113549) digestAlgorithm(2) 9 } */
+#define MBEDTLS_OID_HMAC_SHA384                 MBEDTLS_OID_RSA_COMPANY "\x02\x0a" /**< id-hmacWithSHA1 OBJECT IDENTIFIER ::= { iso(1) member-body(2) us(840) rsadsi(113549) digestAlgorithm(2) 10 } */
+#define MBEDTLS_OID_HMAC_SHA512                 MBEDTLS_OID_RSA_COMPANY "\x02\x0b" /**< id-hmacWithSHA1 OBJECT IDENTIFIER ::= { iso(1) member-body(2) us(840) rsadsi(113549) digestAlgorithm(2) 11 } */
 
 /*
  * Encryption algorithms
  */
 #define MBEDTLS_OID_DES_CBC                     MBEDTLS_OID_ISO_IDENTIFIED_ORG MBEDTLS_OID_OIW_SECSIG_ALG "\x07" /**< desCBC OBJECT IDENTIFIER ::= { iso(1) identified-organization(3) oiw(14) secsig(3) algorithms(2) 7 } */
 #define MBEDTLS_OID_DES_EDE3_CBC                MBEDTLS_OID_RSA_COMPANY "\x03\x07" /**< des-ede3-cbc OBJECT IDENTIFIER ::= { iso(1) member-body(2) -- us(840) rsadsi(113549) encryptionAlgorithm(3) 7 } */
+#define MBEDTLS_OID_AES_128_CBC                 MBEDTLS_OID_GOV "\x03\x04\x01\x02" /**< aes128-CBC OBJECT IDENTIFIER ::= { joint-iso-itu-t(2) country(16) us(840) organization(1) gov(101) csor(3) nistAlgorithm(4) aes(1) aes128-CBC(2) } */
+#define MBEDTLS_OID_AES_192_CBC                 MBEDTLS_OID_GOV "\x03\x04\x01\x16" /**< aes192-CBC OBJECT IDENTIFIER ::= { joint-iso-itu-t(2) country(16) us(840) organization(1) gov(101) csor(3) nistAlgorithm(4) aes(1) aes192-CBC(22) } */
+#define MBEDTLS_OID_AES_256_CBC                 MBEDTLS_OID_GOV "\x03\x04\x01\x2A" /**< aes256-CBC OBJECT IDENTIFIER ::= { joint-iso-itu-t(2) country(16) us(840) organization(1) gov(101) csor(3) nistAlgorithm(4) aes(1) aes256-CBC(42) } */
+#define MBEDTLS_OID_AES_128_GCM                 MBEDTLS_OID_GOV "\x03\x04\x01\x06" /**< aes128-GCM OBJECT IDENTIFIER ::= { joint-iso-itu-t(2) country(16) us(840) organization(1) gov(101) csor(3) nistAlgorithm(4) aes(1) aes128-GCM(6) } */
+#define MBEDTLS_OID_AES_192_GCM                 MBEDTLS_OID_GOV "\x03\x04\x01\x1A" /**< aes192-GCM OBJECT IDENTIFIER ::= { joint-iso-itu-t(2) country(16) us(840) organization(1) gov(101) csor(3) nistAlgorithm(4) aes(1) aes192-GCM(26) } */
+#define MBEDTLS_OID_AES_256_GCM                 MBEDTLS_OID_GOV "\x03\x04\x01\x2E" /**< aes256-GCM OBJECT IDENTIFIER ::= { joint-iso-itu-t(2) country(16) us(840) organization(1) gov(101) csor(3) nistAlgorithm(4) aes(1) aes256-GCM(46) } */
 
 /*
  * PKCS#5 OIDs
@@ -266,6 +281,19 @@
 #define MBEDTLS_OID_PKCS12_PBE_SHA1_DES2_EDE_CBC    MBEDTLS_OID_PKCS12_PBE "\x04" /**< pbeWithSHAAnd2-KeyTripleDES-CBC OBJECT IDENTIFIER ::= {pkcs-12PbeIds 4} */
 #define MBEDTLS_OID_PKCS12_PBE_SHA1_RC2_128_CBC     MBEDTLS_OID_PKCS12_PBE "\x05" /**< pbeWithSHAAnd128BitRC2-CBC OBJECT IDENTIFIER ::= {pkcs-12PbeIds 5} */
 #define MBEDTLS_OID_PKCS12_PBE_SHA1_RC2_40_CBC      MBEDTLS_OID_PKCS12_PBE "\x06" /**< pbeWithSHAAnd40BitRC2-CBC OBJECT IDENTIFIER ::= {pkcs-12PbeIds 6} */
+
+/*
+ * ISO/IEC 18033-2 OIDs.
+ */
+#define MBEDTLS_OID_ISO_18033_2 MBEDTLS_OID_ISO_STANDARD "\x81\x8C\x71\x02" /**< is18033-2 OBJECT IDENTIFIER ::= {iso(1) standard(0) encryption-algorithms(18033) part(2)} */
+
+/*
+ * ISO/IEC 18033-2 KDF OIDs.
+ */
+#define MBEDTLS_OID_ISO_KDF MBEDTLS_OID_ISO_18033_2 "\x05" /**< id-kdf OBJECT IDENTIFIER ::= {is18033-2 key-derivation-function(5)} */
+
+#define MBEDTLS_OID_ISO_KDF1 MBEDTLS_OID_ISO_KDF "\x01" /**< id-kdf-kdf1 OBJECT IDENTIFIER ::= {id-kdf kdf1(1)} */
+#define MBEDTLS_OID_ISO_KDF2 MBEDTLS_OID_ISO_KDF "\x02" /**< id-kdf-kdf2 OBJECT IDENTIFIER ::= {id-kdf kdf2(2)} */
 
 /*
  * EC key algorithms from RFC 5480
@@ -546,6 +574,17 @@ int mbedtls_oid_get_oid_by_md( mbedtls_md_type_t md_alg, const char **oid, size_
  * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
  */
 int mbedtls_oid_get_cipher_alg( const mbedtls_asn1_buf *oid, mbedtls_cipher_type_t *cipher_alg );
+
+/**
+ * \brief          Translate cipher_type into encryption algorithm OID
+ *
+ * \param cipher_alg   cipher algorithm
+ * \param oid          place to store ASN.1 OID string pointer
+ * \param olen         length of the OID
+ *
+ * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
+ */
+int mbedtls_oid_get_oid_by_cipher_alg( mbedtls_cipher_type_t cipher_alg, const char **oid, size_t *olen );
 #endif /* MBEDTLS_CIPHER_C */
 
 #if defined(MBEDTLS_PKCS12_C)
@@ -562,6 +601,31 @@ int mbedtls_oid_get_cipher_alg( const mbedtls_asn1_buf *oid, mbedtls_cipher_type
 int mbedtls_oid_get_pkcs12_pbe_alg( const mbedtls_asn1_buf *oid, mbedtls_md_type_t *md_alg,
                             mbedtls_cipher_type_t *cipher_alg );
 #endif /* MBEDTLS_PKCS12_C */
+
+#if defined(MBEDTLS_KDF_C)
+/**
+ * \brief          Translate KDF algorithm OID into kdf_type
+ *
+ * \param oid      OID to use
+ * \param kdf_alg  place to store key derivation function algorithm
+ *
+ * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
+ */
+int mbedtls_oid_get_kdf_alg( const mbedtls_asn1_buf *oid, mbedtls_kdf_type_t *kdf_alg );
+
+/**
+ * \brief          Translate kdf_type into
+ *                 key derivation function algorithm OID
+ *
+ * \param kdf_alg  key derivation function algorithm
+ * \param oid      place to store ASN.1 OID string pointer
+ * \param olen     length of the OID
+ *
+ * \return         0 if successful, or MBEDTLS_ERR_OID_NOT_FOUND
+ */
+int mbedtls_oid_get_oid_by_kdf_alg( mbedtls_kdf_type_t kdf_alg,
+                            const char **oid, size_t *olen );
+#endif /* MBEDTLS_KDF_C */
 
 #ifdef __cplusplus
 }

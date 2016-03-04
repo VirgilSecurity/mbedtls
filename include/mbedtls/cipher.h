@@ -536,10 +536,6 @@ int mbedtls_cipher_update_ad( mbedtls_cipher_context_t *ctx,
  *                      MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE on an
  *                      unsupported mode for a cipher or a cipher specific
  *                      error code.
- *
- * \note                If the underlying cipher is GCM, all calls to this
- *                      function, except the last one before mbedtls_cipher_finish(),
- *                      must have ilen a multiple of the block size.
  */
 int mbedtls_cipher_update( mbedtls_cipher_context_t *ctx, const unsigned char *input,
                    size_t ilen, unsigned char *output, size_t *olen );

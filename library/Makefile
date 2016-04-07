@@ -34,6 +34,7 @@ endif
 SOEXT_TLS=so.10
 SOEXT_X509=so.0
 SOEXT_CRYPTO=so.0
+SOEXT_ED25519=so.0
 
 DLEXT=so
 # OSX shared library extension:
@@ -75,6 +76,11 @@ OBJS_TLS=	debug.o		net.o		ssl_cache.o	\
 		ssl_cookie.o	ssl_srv.o	ssl_ticket.o	\
 		ssl_tls.o
 
+OBJS_ED25519=	ed25519/fe.o	ed25519/ge.o	ed25519/sc.o	\
+		ed25519/sha512.o	ed25519/sign.o	ed25519/verify.o	\
+		ed25519/key_exchange.o	ed25519/curve25519.o
+
+
 .SILENT:
 
 .PHONY: all static shared clean
@@ -85,9 +91,9 @@ else
 all: shared static
 endif
 
-static: libmbedcrypto.a libmbedx509.a libmbedtls.a
+static: libmbedcrypto.a libmbedx509.a libmbedtls.a libed25519.a
 
-shared: libmbedcrypto.$(DLEXT) libmbedx509.$(DLEXT) libmbedtls.$(DLEXT)
+shared: libmbedcrypto.$(DLEXT) libmbedx509.$(DLEXT) libmbedtls.$(DLEXT) libed25519.$(DLEXT)
 
 # tls
 libmbedtls.a: $(OBJS_TLS)
@@ -158,13 +164,36 @@ libmbedcrypto.dll: $(OBJS_CRYPTO)
 	echo "  LD    $@"
 	$(CC) -shared -Wl,-soname,$@ -Wl,--out-implib,$@.a -o $@ $(OBJS_CRYPTO) -lws2_32 -lwinmm -lgdi32 -static-libgcc $(LOCAL_LDFLAGS) $(LDFLAGS)
 
+# ed25519
+libed25519.a: $(OBJS_ED25519)
+	echo "  AR    $@"
+	$(AR) rc $@ $(OBJS_ED25519)
+	echo "  RL    $@"
+	$(AR) s $@
+
+libed25519.$(SOEXT_ED25519): $(OBJS_ED25519)
+	echo "  LD    $@"
+	$(CC) -shared -Wl,-soname,$@ $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@ $(OBJS_ED25519)
+
+libed25519.so: libed25519.$(SOEXT_ED25519)
+	echo "  LN    $@ -> $<"
+	ln -sf $< $@
+
+libed25519.dylib: $(OBJS_ED25519)
+	echo "  LD    $@"
+	$(CC) -dynamiclib $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@ $(OBJS_ED25519)
+
+libed25519.dll: $(OBJS_ED25519)
+	echo "  LD    $@"
+	$(CC) -shared -Wl,-soname,$@ -Wl,--out-implib,$@.a -o $@ $(OBJS_ED25519) -lws2_32 -lwinmm -lgdi32 -static-libgcc $(LOCAL_LDFLAGS) $(LDFLAGS)
+
 .c.o:
 	echo "  CC    $<"
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -c $<
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -c -o $@ $<
 
 clean:
 ifndef WINDOWS
-	rm -f *.o libmbed*
+	rm -f *.o ed25519/*o libmbed* libed25519*
 else
-	del /Q /F *.o libmbed*
+	del /Q /F *.o ed25519\*.o libmbed* libed25519*
 endif

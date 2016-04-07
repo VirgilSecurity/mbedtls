@@ -941,7 +941,7 @@ static int pk_parse_key_pkcs8_encrypted_der(
 {
     int ret, decrypted = 0;
     size_t len;
-    unsigned char buf[2048];
+    unsigned char *buf;
     unsigned char *p, *end;
     mbedtls_asn1_buf pbe_alg_oid, pbe_params;
 #if defined(MBEDTLS_PKCS12_C)
@@ -949,7 +949,7 @@ static int pk_parse_key_pkcs8_encrypted_der(
     mbedtls_md_type_t md_alg;
 #endif
 
-    memset( buf, 0, sizeof( buf ) );
+    buf = NULL;
 
     p = (unsigned char *) key;
     end = p + keylen;
@@ -985,8 +985,9 @@ static int pk_parse_key_pkcs8_encrypted_der(
     if( ( ret = mbedtls_asn1_get_tag( &p, end, &len, MBEDTLS_ASN1_OCTET_STRING ) ) != 0 )
         return( MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret );
 
-    if( len > sizeof( buf ) )
-        return( MBEDTLS_ERR_PK_BAD_INPUT_DATA );
+    buf = mbedtls_calloc(1, len);
+    if( buf == NULL )
+        return( MBEDTLS_ERR_PK_ALLOC_FAILED );
 
     /*
      * Decrypt EncryptedData with appropriate PDE
@@ -998,6 +999,7 @@ static int pk_parse_key_pkcs8_encrypted_der(
                                 cipher_alg, md_alg,
                                 pwd, pwdlen, p, len, buf ) ) != 0 )
         {
+            mbedtls_free( buf );
             if( ret == MBEDTLS_ERR_PKCS12_PASSWORD_MISMATCH )
                 return( MBEDTLS_ERR_PK_PASSWORD_MISMATCH );
 
@@ -1013,6 +1015,7 @@ static int pk_parse_key_pkcs8_encrypted_der(
                                              pwd, pwdlen,
                                              p, len, buf ) ) != 0 )
         {
+            mbedtls_free( buf );
             return( ret );
         }
 
@@ -1020,7 +1023,10 @@ static int pk_parse_key_pkcs8_encrypted_der(
         // not MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE
         //
         if( *buf != ( MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE ) )
+        {
+            mbedtls_free( buf );
             return( MBEDTLS_ERR_PK_PASSWORD_MISMATCH );
+        }
 
         decrypted = 1;
     }
@@ -1032,6 +1038,7 @@ static int pk_parse_key_pkcs8_encrypted_der(
         if( ( ret = mbedtls_pkcs5_pbes2( &pbe_params, MBEDTLS_PKCS5_DECRYPT, pwd, pwdlen,
                                   p, len, buf ) ) != 0 )
         {
+            mbedtls_free( buf );
             if( ret == MBEDTLS_ERR_PKCS5_PASSWORD_MISMATCH )
                 return( MBEDTLS_ERR_PK_PASSWORD_MISMATCH );
 
@@ -1047,9 +1054,14 @@ static int pk_parse_key_pkcs8_encrypted_der(
     }
 
     if( decrypted == 0 )
+    {
+        mbedtls_free( buf );
         return( MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE );
+    }
 
-    return( pk_parse_key_pkcs8_unencrypted_der( pk, buf, len ) );
+    ret = pk_parse_key_pkcs8_unencrypted_der( pk, buf, len );
+    mbedtls_free( buf );
+    return ret;
 }
 #endif /* MBEDTLS_PKCS12_C || MBEDTLS_PKCS5_C */
 

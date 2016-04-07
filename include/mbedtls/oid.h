@@ -400,6 +400,14 @@
  *   ecdsa-with-SHA2(3) 4 } */
 #define MBEDTLS_OID_ECDSA_SHA512            MBEDTLS_OID_ANSI_X9_62_SIG_SHA2 "\x04"
 
+/*
+ * cryptlib - https://www.cs.auckland.ac.nz/~pgut001/cryptlib
+ * curve25519 OBJECT IDENTIFIER ::= {
+ *   iso(1) identified-organization(3) dod(6) internet(1) private(4)
+ *   enterprise(1) dds(3029) algorithm(1) ECC(5) curve25519(1) }
+ */
+#define MBEDTLS_OID_EC_GRP_CURVE25519   "\x2b\x06\x01\x04\x01\x97\x55\x01\x05\x01"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

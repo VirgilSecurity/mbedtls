@@ -62,6 +62,10 @@
 #define mbedtls_free       free
 #endif
 
+#if defined(MBEDTLS_ED25519_ECP_ENABLED)
+#include "ed25519/curve25519.h"
+#endif /* MBEDTLS_ED25519_ECP_ENABLED */
+
 #if ( defined(__ARMCC_VERSION) || defined(_MSC_VER) ) && \
     !defined(inline) && !defined(__cplusplus)
 #define inline __inline
@@ -1602,8 +1606,64 @@ cleanup:
 
     return( ret );
 }
-
 #endif /* ECP_MONTGOMERY */
+
+#if defined(MBEDTLS_ED25519_ECP_ENABLED)
+/*
+ * Swap given bytes
+ */
+static void swap(unsigned char *a, unsigned char *b) {
+    unsigned char t = *a; *a = *b; *b = t;
+}
+
+/*
+ * Reverse bytes in range [first, last)
+ */
+static void reverse_bytes(unsigned char *first, unsigned char *last) {
+    while ((first!=last)&&(first!=--last)) {
+        swap (first,last);
+        ++first;
+    }
+}
+
+/*
+ * Calculate Curve25519 public key
+ */
+static int mbedtls_curve25519_getpub( mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
+             const mbedtls_mpi *m, const mbedtls_ecp_point *P,
+             int (*f_rng)(void *, unsigned char *, size_t), void *p_rng )
+{
+    int ret;
+    unsigned char public_key[32];
+    unsigned char private_key[32];
+
+    (void) grp;
+    (void) P;
+    (void) f_rng;
+    (void) p_rng;
+
+    // m -> m(BE) -> m(LE)
+    MBEDTLS_MPI_CHK( mbedtls_mpi_write_binary( m, private_key, sizeof(private_key) ) );
+    reverse_bytes( private_key, private_key + sizeof( private_key ) );
+
+    // compute public key
+    if( curve25519_getpub( public_key, private_key ) )
+    {
+        ret = MBEDTLS_ERR_ECP_BAD_INPUT_DATA;
+        goto cleanup;
+    }
+
+    // R(LE) -> R(BE) -> R
+    reverse_bytes( public_key, public_key + sizeof( public_key ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary( &R->X, public_key, sizeof( public_key ) ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_lset( &R->Z, 1 ) );
+    mbedtls_mpi_free( &R->Y );
+
+cleanup:
+    mbedtls_zeroize( private_key, sizeof( private_key ) );
+    return( ret );
+}
+#endif /* MBEDTLS_ED25519_ECP_ENABLED */
 
 /*
  * Multiplication R = m * P
@@ -1886,6 +1946,12 @@ cleanup:
     if( ret != 0 )
         return( ret );
 
+#if defined(MBEDTLS_ED25519_ECP_ENABLED)
+    if( grp->id == MBEDTLS_ECP_DP_CURVE25519 )
+    {
+        return( mbedtls_curve25519_getpub( grp, Q, d, G, f_rng, p_rng ) );
+    }
+#endif /* MBEDTLS_ED25519_ECP_ENABLED */
     return( mbedtls_ecp_mul( grp, Q, d, G, f_rng, p_rng ) );
 }
 

@@ -714,6 +714,45 @@
 //#define MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
 
 /**
+ * \def MBEDTLS_ED25519_ECP_ENABLED
+ *
+ * Use Ed25519 library for key pair generation for Curve25519
+ *
+ * \warning This is currently experimental, so this is disabled by default.
+ *
+ * Requires: MBEDTLS_ED25519_C
+ *           MBEDTLS_ECP_C
+ *           MBEDTLS_ECP_DP_CURVE25519_ENABLED
+ */
+// #define MBEDTLS_ED25519_ECP_ENABLED
+
+/**
+ * \def MBEDTLS_ED25519_ECDH_ENABLED
+ *
+ * Use Ed25519 library in ECDH algorithm for Curve25519
+ *
+ * \warning This is currently experimental, so this is disabled by default.
+ *
+ * Requires: MBEDTLS_ED25519_C
+ *           MBEDTLS_ECDH_C
+ *           MBEDTLS_ECP_DP_CURVE25519_ENABLED
+ */
+// #define MBEDTLS_ED25519_ECDH_ENABLED
+
+/**
+ * \def MBEDTLS_ED25519_ECDSA_ENABLED
+ *
+ * Use Ed25519 library in ECDSA algorithm for Curve25519
+ *
+ * \warning This is currently experimental, so this is disabled by default.
+ *
+ * Requires: MBEDTLS_ED25519_C
+ *           MBEDTLS_ECDSA_C
+ *           MBEDTLS_ECP_DP_CURVE25519_ENABLED
+ */
+// #define MBEDTLS_ED25519_ECDSA_ENABLED
+
+/**
  * \def MBEDTLS_PK_PARSE_EC_EXTENDED
  *
  * Enhance support for reading EC keys using variants of SEC1 not allowed by
@@ -2455,6 +2494,23 @@
  * Caller:
  */
 #define MBEDTLS_XTEA_C
+
+/**
+ * \def MBEDTLS_ED25519_C
+ *
+ * Use Ed25519 library for Curve25519 operations such ECDSA, ECDH and optimized key pair generation.
+ *
+ * \warning This is currently experimental, so this is disabled by default.
+ *
+ * Module:  library/ed25519/.c
+ *
+ * Requires: MBEDTLS_ECP_DP_CURVE25519_ENABLED
+ *
+ * Caller: library/ecp.c
+ *         library/ecdh.c
+ *         library/ecdsa.c
+ */
+// #define MBEDTLS_ED25519_C
 
 /* \} name SECTION: mbed TLS modules */
 

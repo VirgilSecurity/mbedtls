@@ -401,12 +401,31 @@
 #define MBEDTLS_OID_ECDSA_SHA512            MBEDTLS_OID_ANSI_X9_62_SIG_SHA2 "\x04"
 
 /*
+ * From https://tools.ietf.org/html/draft-ietf-curdle-pkix-01
+ *   id-X25519    OBJECT IDENTIFIER ::= { 1.3.101.110 }
+ */
+#define MBEDTLS_OID_X25519   "\x2b\x65\x6e"
+
+/*
+ * From https://tools.ietf.org/html/draft-ietf-curdle-pkix-01
+ *   id-Ed25519    OBJECT IDENTIFIER ::= { 1.3.101.112 }
+ */
+#define MBEDTLS_OID_ED25519   "\x2b\x65\x70"
+
+/*
  * cryptlib - https://www.cs.auckland.ac.nz/~pgut001/cryptlib
  * curve25519 OBJECT IDENTIFIER ::= {
  *   iso(1) identified-organization(3) dod(6) internet(1) private(4)
  *   enterprise(1) dds(3029) algorithm(1) ECC(5) curve25519(1) }
  */
 #define MBEDTLS_OID_EC_GRP_CURVE25519   "\x2b\x06\x01\x04\x01\x97\x55\x01\x05\x01"
+/*
+ * cryptlib - https://www.cs.auckland.ac.nz/~pgut001/cryptlib
+ * ed25519 OBJECT IDENTIFIER ::= {
+ *   iso(1) identified-organization(3) dod(6) internet(1) private(4)
+ *   enterprise(1) 11591 ellipticCurve(15) ed25519(1) }
+ */
+#define MBEDTLS_OID_EC_GRP_ED25519   "\x2B\x06\x01\x04\x01\xDA\x47\x0F\x01"
 
 #ifdef __cplusplus
 extern "C" {

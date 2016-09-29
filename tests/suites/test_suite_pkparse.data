@@ -226,3 +226,27 @@ pk_parse_key_rsa:"301c02010002010102010102010102010102010102010102010102010100":
 
 Key ASN1 (RSAPrivateKey, values present, check_privkey fails)
 pk_parse_key_rsa:"301b020100020101020101020101020101020101020101020101020101":"":MBEDTLS_ERR_PK_KEY_INVALID_FORMAT
+
+Parse Public Fast EC Key #1 (draft-ietf-curdle-pkix-01, X25519)
+depends_on:MBEDTLS_PEM_PARSE_C:MBEDTLS_ED25519_C
+pk_parse_public_keyfile_x25519:"data_files/ec_x25519_pub.pem":0
+
+Parse Public Fast EC Key #2 (draft-ietf-curdle-pkix-01, Ed25519)
+depends_on:MBEDTLS_PEM_PARSE_C:MBEDTLS_ED25519_C
+pk_parse_public_keyfile_ed25519:"data_files/ec_ed25519_pub.pem":0
+
+Parse Fast EC Key #1 (draft-ietf-curdle-pkix-01, X25519)
+depends_on:MBEDTLS_PEM_PARSE_C:MBEDTLS_ED25519_C
+pk_parse_keyfile_x25519:"data_files/ec_x25519_prv.pem":"":0
+
+Parse Fast EC Key #2 (draft-ietf-curdle-pkix-01, Ed25519)
+depends_on:MBEDTLS_PEM_PARSE_C:MBEDTLS_ED25519_C
+pk_parse_keyfile_ed25519:"data_files/ec_ed25519_prv.pem":"":0
+
+Parse Public EC (Experimental, curve25519)
+depends_on:MBEDTLS_PEM_PARSE_C:MBEDTLS_ECP_C:MBEDTLS_ECP_DP_CURVE25519_ENABLED
+pk_parse_public_keyfile_ec:"data_files/ec_curve25519_pub.pem":0
+
+Parse EC Key (Experimental, curve25519)
+depends_on:MBEDTLS_PEM_PARSE_C:MBEDTLS_ECP_C:MBEDTLS_ECP_DP_CURVE25519_ENABLED
+pk_parse_keyfile_ec:"data_files/ec_curve25519_prv.pem":"NULL":0

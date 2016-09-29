@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2015 Virgil Security Inc.
+ * Copyright (C) 2015-2016 Virgil Security Inc.
  *
  * Lead Maintainer: Virgil Security Inc. <support@virgilsecurity.com>
  *
@@ -112,9 +112,11 @@ mbedtls_kdf_type_t mbedtls_kdf_get_type( const mbedtls_kdf_info_t *kdf_info );
  * \brief          Output = message_key derivation function( input buffer )
  *
  * \param kdf_info key derivation function info
+ * \param md_info  message digest info
  * \param input    buffer holding the  data
  * \param ilen     length of the input data
  * \param output   Generic key derivation function checksum result
+ * \param olen     Generic key derivation function checksum result length
  *
  * \returns        0 on success, MBEDTLS_ERR_MD_BAD_INPUT_DATA if parameter
  *                 verification fails.

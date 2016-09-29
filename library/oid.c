@@ -409,6 +409,14 @@ static const oid_pk_alg_t oid_pk_alg[] =
         MBEDTLS_PK_ECKEY_DH,
     },
     {
+        { ADD_LEN( MBEDTLS_OID_X25519 ),        "id-X25519",        "Curve25519 key" },
+        MBEDTLS_PK_X25519,
+    },
+    {
+        { ADD_LEN( MBEDTLS_OID_ED25519 ),       "id-Ed25519",       "Ed25519 key" },
+        MBEDTLS_PK_ED25519,
+    },
+    {
         { NULL, 0, NULL, NULL },
         MBEDTLS_PK_NONE,
     },

@@ -36,7 +36,7 @@ my @low_level_modules = ( "AES", "ASN1", "BLOWFISH", "CAMELLIA", "BIGNUM",
                           "SHA1", "SHA256", "SHA512", "GCM", "THREADING", "CCM",
                           "KDF1", "KDF2" );
 my @high_level_modules = ( "PEM", "X509", "DHM", "RSA", "ECP", "MD", "CIPHER", "SSL",
-                           "PK", "PKCS12", "PKCS5", "KDF", "ECIES" );
+                           "PK", "PKCS12", "PKCS5", "KDF", "ECIES", "FAST_EC" );
 
 my $line_separator = $/;
 undef $/;
@@ -80,6 +80,7 @@ while (my $line = <GREP>)
     $module_name = "BIGNUM" if ($module_name eq "MPI");
     $module_name = "CTR_DRBG" if ($module_name eq "CTR");
     $module_name = "HMAC_DRBG" if ($module_name eq "HMAC");
+    $module_name = "FAST_EC" if ($module_name eq "FAST");
 
     my $define_name = $module_name;
     $define_name = "X509_USE,X509_CREATE" if ($define_name eq "X509");

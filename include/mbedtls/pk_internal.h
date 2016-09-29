@@ -111,4 +111,9 @@ extern const mbedtls_pk_info_t mbedtls_ecdsa_info;
 extern const mbedtls_pk_info_t mbedtls_rsa_alt_info;
 #endif
 
+#if defined(MBEDTLS_ED25519_C)
+extern const mbedtls_pk_info_t mbedtls_x25519_info;
+extern const mbedtls_pk_info_t mbedtls_ed25519_info;
+#endif
+
 #endif /* MBEDTLS_PK_WRAP_H */

@@ -34,6 +34,7 @@
 #include "mbedtls/platform.h"
 #else
 #define mbedtls_snprintf snprintf
+#define mbedtls_time_t   time_t
 #endif
 
 #if defined(MBEDTLS_ERROR_C)
@@ -90,6 +91,10 @@
 
 #if defined(MBEDTLS_ENTROPY_C)
 #include "mbedtls/entropy.h"
+#endif
+
+#if defined(MBEDTLS_FAST_EC_C)
+#include "mbedtls/fast_ec.h"
 #endif
 
 #if defined(MBEDTLS_GCM_C)
@@ -198,6 +203,8 @@ void mbedtls_strerror( int ret, char *buf, size_t buflen )
             mbedtls_snprintf( buf, buflen, "CIPHER - Decryption of block requires a full block" );
         if( use_ret == -(MBEDTLS_ERR_CIPHER_AUTH_FAILED) )
             mbedtls_snprintf( buf, buflen, "CIPHER - Authentication failed (for AEAD modes)" );
+        if( use_ret == -(MBEDTLS_ERR_CIPHER_INVALID_CONTEXT) )
+            mbedtls_snprintf( buf, buflen, "CIPHER - The context is invalid, eg because it was free()ed" );
 #endif /* MBEDTLS_CIPHER_C */
 
 #if defined(MBEDTLS_DHM_C)
@@ -250,6 +257,23 @@ void mbedtls_strerror( int ret, char *buf, size_t buflen )
         if( use_ret == -(MBEDTLS_ERR_ECP_SIG_LEN_MISMATCH) )
             mbedtls_snprintf( buf, buflen, "ECP - Signature is valid but shorter than the user-supplied length" );
 #endif /* MBEDTLS_ECP_C */
+
+#if defined(MBEDTLS_FAST_EC_C)
+        if( use_ret == -(MBEDTLS_ERR_FAST_EC_ALLOC_FAILED) )
+            mbedtls_snprintf( buf, buflen, "FAST_EC - Failed to allocate memory" );
+        if( use_ret == -(MBEDTLS_ERR_FAST_EC_BAD_INPUT_DATA) )
+            mbedtls_snprintf( buf, buflen, "FAST_EC - Bad input parameters" );
+        if( use_ret == -(MBEDTLS_ERR_FAST_EC_VERIFY_FAILED) )
+            mbedtls_snprintf( buf, buflen, "FAST_EC - The signature is not valid" );
+        if( use_ret == -(MBEDTLS_ERR_FAST_EC_SIG_LEN_MISMATCH) )
+            mbedtls_snprintf( buf, buflen, "FAST_EC - The signature length mismatch" );
+        if( use_ret == -(MBEDTLS_ERR_FAST_EC_FEATURE_UNAVAILABLE) )
+            mbedtls_snprintf( buf, buflen, "FAST_EC - The selected feature is not available" );
+        if( use_ret == -(MBEDTLS_ERR_FAST_EC_PUB_PRV_MISMATCH) )
+            mbedtls_snprintf( buf, buflen, "FAST_EC - Public key is not match private key" );
+        if( use_ret == -(MBEDTLS_ERR_FAST_EC_SHARED_WEAK_KEY) )
+            mbedtls_snprintf( buf, buflen, "FAST_EC - Key contains point of small order" );
+#endif /* MBEDTLS_FAST_EC_C */
 
 #if defined(MBEDTLS_KDF_C)
         if( use_ret == -(MBEDTLS_ERR_KDF_BAD_INPUT_DATA) )

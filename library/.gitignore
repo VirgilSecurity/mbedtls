@@ -1,4 +1,5 @@
 *.o
 libmbed*
+libed25519*
 *.sln
 *.vcxproj

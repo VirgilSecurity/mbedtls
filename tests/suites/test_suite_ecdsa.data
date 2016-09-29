@@ -51,7 +51,7 @@ depends_on:MBEDTLS_ECP_DP_SECP521R1_ENABLED
 ecdsa_write_read_random:MBEDTLS_ECP_DP_SECP521R1
 
 ECDSA write-read random #6
-depends_on:MBEDTLS_ED25519_ECDSA_ENABLED
+depends_on:MBEDTLS_ECDSA_CURVE25519_OVER_ED25519_ENABLED:MBEDTLS_ECP_DP_CURVE25519_ENABLED
 ecdsa_write_read_random:MBEDTLS_ECP_DP_CURVE25519
 
 ECDSA deterministic test vector rfc 6979 p192 mbedtls_sha1

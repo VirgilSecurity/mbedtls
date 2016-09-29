@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2015 Virgil Security Inc.
+ * Copyright (C) 2015-2016 Virgil Security Inc.
  *
  * Lead Maintainer: Virgil Security Inc. <support@virgilsecurity.com>
  *
@@ -142,18 +142,30 @@
 extern "C" {
 #endif
 
+typedef enum {
+    MBEDTLS_ECIES_NONE=0,
+    MBEDTLS_ECIES_ECP,
+    MBEDTLS_ECIES_FAST_EC,
+} mbedtls_ecies_type_t;
+
+typedef struct mbedtls_ecies_info_t mbedtls_ecies_info_t;
+
+const mbedtls_ecies_info_t* mbedtls_ecies_info_from_type(mbedtls_ecies_type_t type);
+
 /**
  * \brief          Perform ECIES encryption.
  * \return         0 if successful
  */
-int mbedtls_ecies_encrypt(mbedtls_ecp_keypair *key, const unsigned char *input, size_t ilen,
+int mbedtls_ecies_encrypt(void *key, const mbedtls_ecies_info_t* info,
+        const unsigned char *input, size_t ilen,
         unsigned char *output, size_t *olen, size_t osize,
         int (*f_rng)(void *, unsigned char *, size_t), void *p_rng);
 /**
  * \brief          Perform ECIES decryption.
  * \return         0 if successful
  */
-int mbedtls_ecies_decrypt(mbedtls_ecp_keypair *key, const unsigned char *input, size_t ilen,
+int mbedtls_ecies_decrypt(void *key, const mbedtls_ecies_info_t* info,
+        const unsigned char *input, size_t ilen,
         unsigned char *output, size_t *olen, size_t osize,
         int (*f_rng)(void *, unsigned char *, size_t), void *p_rng);
 

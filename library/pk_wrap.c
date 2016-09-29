@@ -45,6 +45,11 @@
 #include "mbedtls/ecies.h"
 #endif
 
+#if defined(MBEDTLS_FAST_EC_C)
+#include "mbedtls/fast_ec.h"
+#endif
+
+
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
 #else
@@ -252,8 +257,8 @@ static int eckey_encrypt_wrap(void *ctx,
                     unsigned char *output, size_t *olen, size_t osize,
                     int (*f_rng)(void *, unsigned char *, size_t), void *p_rng)
 {
-    return mbedtls_ecies_encrypt( (mbedtls_ecp_keypair *)ctx, input, ilen, output, olen, osize,
-                          f_rng, p_rng );
+    return mbedtls_ecies_encrypt( ctx, mbedtls_ecies_info_from_type(MBEDTLS_ECIES_ECP),
+            input, ilen, output, olen, osize, f_rng, p_rng );
 }
 
 static int eckey_decrypt_wrap(void *ctx,
@@ -261,8 +266,8 @@ static int eckey_decrypt_wrap(void *ctx,
                     unsigned char *output, size_t *olen, size_t osize,
                     int (*f_rng)(void *, unsigned char *, size_t), void *p_rng)
 {
-    return mbedtls_ecies_decrypt( (mbedtls_ecp_keypair *)ctx, input, ilen, output, olen, osize,
-                          f_rng, p_rng );
+    return mbedtls_ecies_decrypt( ctx, mbedtls_ecies_info_from_type(MBEDTLS_ECIES_ECP),
+            input, ilen, output, olen, osize, f_rng, p_rng );
 }
 
 #endif /* MBEDTLS_ECIES_C */
@@ -532,5 +537,129 @@ const mbedtls_pk_info_t mbedtls_rsa_alt_info = {
 };
 
 #endif /* MBEDTLS_PK_RSA_ALT_SUPPORT */
+
+#if defined(MBEDTLS_FAST_EC_C)
+
+static int fast_ec_x25519_can_do( mbedtls_pk_type_t type )
+{
+
+    return( type == MBEDTLS_PK_X25519 );
+}
+
+static int fast_ec_ed25519_can_do( mbedtls_pk_type_t type )
+{
+
+    return( type == MBEDTLS_PK_X25519 || type == MBEDTLS_PK_ED25519 );
+}
+
+static size_t fast_ec_get_bitlen( const void *ctx )
+{
+    return( mbedtls_fast_ec_get_key_bitlen( ( (mbedtls_fast_ec_keypair_t *) ctx )->info ) );
+}
+
+static int fast_ec_verify_wrap( void *ctx, mbedtls_md_type_t md_alg,
+                       const unsigned char *hash, size_t hash_len,
+                       const unsigned char *sig, size_t sig_len )
+{
+    int ret = 0;
+
+    mbedtls_fast_ec_keypair_t *fast_ec = (mbedtls_fast_ec_keypair_t *) ctx;
+
+    (void) md_alg;
+
+    ret = mbedtls_fast_ec_verify( fast_ec, sig, sig_len, hash, hash_len );
+
+    if( ret == MBEDTLS_ERR_FAST_EC_SIG_LEN_MISMATCH )
+        return( MBEDTLS_ERR_PK_SIG_LEN_MISMATCH );
+
+    return( ret );
+}
+
+static int fast_ec_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
+                   const unsigned char *hash, size_t hash_len,
+                   unsigned char *sig, size_t *sig_len,
+                   int (*f_rng)(void *, unsigned char *, size_t), void *p_rng )
+{
+    mbedtls_fast_ec_keypair_t *fast_ec = (mbedtls_fast_ec_keypair_t *) ctx;
+
+    (void) md_alg;
+    (void) f_rng;
+    (void) p_rng;
+
+    return( mbedtls_fast_ec_sign( fast_ec, sig, sig_len, hash, hash_len ) );
+}
+
+static int fast_ec_encrypt_wrap(void *ctx,
+                    const unsigned char *input, size_t ilen,
+                    unsigned char *output, size_t *olen, size_t osize,
+                    int (*f_rng)(void *, unsigned char *, size_t), void *p_rng)
+{
+    return( mbedtls_ecies_encrypt( ctx, mbedtls_ecies_info_from_type(MBEDTLS_ECIES_FAST_EC),
+            input, ilen, output, olen, osize, f_rng, p_rng ) );
+}
+
+static int fast_ec_decrypt_wrap(void *ctx,
+                    const unsigned char *input, size_t ilen,
+                    unsigned char *output, size_t *olen, size_t osize,
+                    int (*f_rng)(void *, unsigned char *, size_t), void *p_rng)
+{
+    return( mbedtls_ecies_decrypt( ctx, mbedtls_ecies_info_from_type(MBEDTLS_ECIES_FAST_EC),
+            input, ilen, output, olen, osize, f_rng, p_rng ) );
+}
+
+static int fast_ec_check_pair( const void *pub, const void *prv )
+{
+    return( mbedtls_fast_ec_check_pub_priv( (const mbedtls_fast_ec_keypair_t *) pub,
+                                (const mbedtls_fast_ec_keypair_t *) prv ) );
+}
+
+static void *fast_ec_alloc_wrap( void )
+{
+     mbedtls_fast_ec_keypair_t* ctx = mbedtls_calloc( 1, sizeof( mbedtls_fast_ec_keypair_t ) );
+
+     if( ctx != NULL )
+        mbedtls_fast_ec_init( ctx );
+
+    return( ctx );
+
+}
+
+static void fast_ec_free_wrap( void *ctx )
+{
+    mbedtls_fast_ec_free( (mbedtls_fast_ec_keypair_t *) ctx );
+    mbedtls_free( ctx );
+}
+
+const mbedtls_pk_info_t mbedtls_x25519_info = {
+    MBEDTLS_PK_X25519,
+    "X25519",
+    fast_ec_get_bitlen,
+    fast_ec_x25519_can_do,
+    NULL, // verify
+    NULL, // sign
+    fast_ec_decrypt_wrap,
+    fast_ec_encrypt_wrap,
+    fast_ec_check_pair,
+    fast_ec_alloc_wrap,
+    fast_ec_free_wrap,
+    NULL, // debug
+};
+
+const mbedtls_pk_info_t mbedtls_ed25519_info = {
+    MBEDTLS_PK_ED25519,
+    "ED25519",
+    fast_ec_get_bitlen,
+    fast_ec_ed25519_can_do,
+    fast_ec_verify_wrap,
+    fast_ec_sign_wrap,
+    fast_ec_decrypt_wrap,
+    fast_ec_encrypt_wrap,
+    fast_ec_check_pair,
+    fast_ec_alloc_wrap,
+    fast_ec_free_wrap,
+    NULL, // debug
+};
+
+#endif /* MBEDTLS_FAST_EC_C */
 
 #endif /* MBEDTLS_PK_C */

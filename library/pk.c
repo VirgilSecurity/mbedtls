@@ -89,6 +89,12 @@ const mbedtls_pk_info_t * mbedtls_pk_info_from_type( mbedtls_pk_type_t pk_type )
         case MBEDTLS_PK_ECDSA:
             return( &mbedtls_ecdsa_info );
 #endif
+#if defined(MBEDTLS_ED25519_C)
+        case MBEDTLS_PK_X25519:
+            return( &mbedtls_x25519_info );
+        case MBEDTLS_PK_ED25519:
+            return( &mbedtls_ed25519_info );
+#endif
         /* MBEDTLS_PK_RSA_ALT omitted on purpose */
         default:
             return( NULL );

@@ -18,10 +18,6 @@ Public key write check EC Brainpool 512 bits
 depends_on:MBEDTLS_ECP_C:MBEDTLS_BASE64_C:MBEDTLS_ECP_DP_BP512R1_ENABLED
 pk_write_pubkey_check:"data_files/ec_bp512_pub.pem"
 
-Public key write check EC Curve25519
-depends_on:MBEDTLS_ECP_C:MBEDTLS_BASE64_C:MBEDTLS_ECP_DP_CURVE25519_ENABLED
-pk_write_pubkey_check:"data_files/ec_curve25519_pub.pem"
-
 Private key write check RSA
 depends_on:MBEDTLS_RSA_C:MBEDTLS_BASE64_C
 pk_write_key_check:"data_files/server1.key"
@@ -41,10 +37,6 @@ pk_write_key_check:"data_files/ec_521_prv.pem"
 Private key write check EC Brainpool 512 bits
 depends_on:MBEDTLS_ECP_C:MBEDTLS_BASE64_C:MBEDTLS_ECP_DP_BP512R1_ENABLED
 pk_write_key_check:"data_files/ec_bp512_prv.pem"
-
-Private key write check EC Curve25519
-depends_on:MBEDTLS_ECP_C:MBEDTLS_BASE64_C:MBEDTLS_ECP_DP_CURVE25519_ENABLED
-pk_write_key_check:"data_files/ec_curve25519_prv.pem"
 
 Private key write check RSA (PKCS#8 wrapped)
 depends_on:MBEDTLS_RSA_C:MBEDTLS_BASE64_C:MBEDTLS_PK_WRITE_PKCS8_C
@@ -77,3 +69,27 @@ pk_write_key_pkcs8_check:"data_files/ec_prv.pk8.pem":"":""
 Private key write check EC (PKCS#8 encrypted SHA1-RC4-128)
 depends_on:MBEDTLS_ECP_C:MBEDTLS_BASE64_C:MBEDTLS_PEM_PARSE_C:MBEDTLS_ECP_C:MBEDTLS_ECP_DP_SECP192R1_ENABLED:MBEDTLS_PKCS12_C:MBEDTLS_ARC4_C:MBEDTLS_PK_WRITE_PKCS8_C
 pk_write_key_pkcs8_check:"data_files/ec_prv.pk8.pw.pem":"polar":"301C060A2A864886F70D010C0101300E040822B9660824A9273702020800"
+
+Public key write check Fast EC (draft-ietf-curdle-pkix-01, X25519)
+depends_on:MBEDTLS_ED25519_C:MBEDTLS_BASE64_C
+pk_write_pubkey_check:"data_files/ec_x25519_pub.pem"
+
+Public key write check Fast EC (draft-ietf-curdle-pkix-01,Ed25519)
+depends_on:MBEDTLS_ED25519_C:MBEDTLS_BASE64_C
+pk_write_pubkey_check:"data_files/ec_ed25519_pub.pem"
+
+Private key write check Fast EC (draft-ietf-curdle-pkix-01, X25519)
+depends_on:MBEDTLS_ED25519_C:MBEDTLS_BASE64_C
+pk_write_key_check:"data_files/ec_x25519_prv.pem"
+
+Private key write check FAst EC (draft-ietf-curdle-pkix-01, Ed25519)
+depends_on:MBEDTLS_ED25519_C:MBEDTLS_BASE64_C
+pk_write_key_check:"data_files/ec_ed25519_prv.pem"
+
+Public key write check EC Curve25519 (Experemental)
+depends_on:MBEDTLS_ECP_C:MBEDTLS_BASE64_C:MBEDTLS_ECP_DP_CURVE25519_ENABLED
+pk_write_pubkey_check:"data_files/ec_curve25519_pub.pem"
+
+Private key write check EC Curve25519 (Experemental)
+depends_on:MBEDTLS_ECP_C:MBEDTLS_BASE64_C:MBEDTLS_ECP_DP_CURVE25519_ENABLED
+pk_write_key_check:"data_files/ec_curve25519_prv.pem"

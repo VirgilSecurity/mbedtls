@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2015 Virgil Security Inc.
+ * Copyright (C) 2015-2016 Virgil Security Inc.
  *
  * Lead Maintainer: Virgil Security Inc. <support@virgilsecurity.com>
  *
@@ -79,18 +79,6 @@ do { \
     } \
 } while (0)
 
-static int asn1_get_tag_len(unsigned char *p, const unsigned char *end,
-        size_t *len)
-{
-    int result = 0;
-    unsigned char *len_p = p + 1;
-    INVOKE_AND_CHECK(result,
-        mbedtls_asn1_get_len(&len_p, end, len)
-    );
-    *len += len_p - p;
-    return result;
-}
-
 int mbedtls_ecies_read_envelope(unsigned char **p, const unsigned char *end,
         size_t *len)
 {
@@ -115,39 +103,6 @@ int mbedtls_ecies_read_version(unsigned char **p, const unsigned char *end,
     return result;
 }
 
-int mbedtls_ecies_read_originator(unsigned char **p, const unsigned char *end,
-        mbedtls_ecp_keypair **originator_keypair)
-{
-    int result = 0;
-    mbedtls_pk_context pk;
-    size_t key_len = 0;
-
-    if (originator_keypair == NULL || *originator_keypair != NULL)
-    {
-        return MBEDTLS_ERR_ECIES_BAD_INPUT_DATA;
-    }
-
-    INVOKE_AND_CHECK(result,
-        asn1_get_tag_len(*p, end, &key_len)
-    );
-
-    mbedtls_pk_init(&pk);
-    INVOKE_AND_CHECK(result,
-        mbedtls_pk_parse_public_key(&pk, *p, key_len)
-    );
-
-    if (mbedtls_pk_can_do(&pk, MBEDTLS_PK_ECKEY) ||
-        mbedtls_pk_can_do(&pk, MBEDTLS_PK_ECKEY_DH) ||
-        mbedtls_pk_can_do(&pk, MBEDTLS_PK_ECDSA))
-    {
-        *originator_keypair = mbedtls_pk_ec(pk); // SHOULD be released in client code.
-    } else {
-        mbedtls_pk_free(&pk);
-        result = MBEDTLS_ERR_ECIES_MALFORMED_DATA;
-    }
-    *p += key_len;
-    return result;
-}
 
 int mbedtls_ecies_read_kdf(unsigned char **p, const unsigned char *end,
         mbedtls_kdf_type_t *kdf_type, mbedtls_md_type_t *md_type)
@@ -290,27 +245,6 @@ int mbedtls_ecies_write_version(unsigned char **p, unsigned char *start, int ver
         mbedtls_asn1_write_int(p, start, version)
     );
     return (int)asn_len;
-}
-
-int mbedtls_ecies_write_originator(unsigned char **p, unsigned char *start,
-        mbedtls_ecp_keypair *originator_keypair)
-{
-    int result = 0;
-    size_t len = 0;
-    mbedtls_pk_context pk;
-
-    if (originator_keypair == NULL)
-    {
-        return MBEDTLS_ERR_ECIES_BAD_INPUT_DATA;
-    }
-
-    pk.pk_info = mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY);
-    pk.pk_ctx = originator_keypair;
-    ACCUMULATE_AND_CHECK(result, len,
-        mbedtls_pk_write_pubkey_der(&pk, start , *p - start)
-    );
-    *p -= len;
-    return (int)len;
 }
 
 int mbedtls_ecies_write_kdf(unsigned char **p, unsigned char *start,

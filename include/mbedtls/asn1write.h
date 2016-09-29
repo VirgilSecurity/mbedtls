@@ -128,6 +128,21 @@ int mbedtls_asn1_write_algorithm_identifier( unsigned char **p, unsigned char *s
                                      size_t par_len );
 
 /**
+ * \brief           Write an AlgorithmIdentifier sequence in ASN.1 format
+ *                  Note: function works backwards in data buffer
+ *                  Note: parameters are omitted
+ *
+ * \param p         reference to current position pointer
+ * \param start     start of the buffer (for bounds-checking)
+ * \param oid       the OID of the algorithm
+ * \param oid_len   length of the OID
+ *
+ * \return          the length written or a negative error code
+ */
+int mbedtls_asn1_write_algorithm_identifier_no_params( unsigned char **p, unsigned char *start,
+                                     const char *oid, size_t oid_len );
+
+/**
  * \brief           Write a boolean tag (MBEDTLS_ASN1_BOOLEAN) and value in ASN.1 format
  *                  Note: function works backwards in data buffer
  *

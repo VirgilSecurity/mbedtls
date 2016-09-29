@@ -62,9 +62,9 @@
 #define mbedtls_free       free
 #endif
 
-#if defined(MBEDTLS_ED25519_ECP_ENABLED)
-#include "ed25519/curve25519.h"
-#endif /* MBEDTLS_ED25519_ECP_ENABLED */
+#if defined(MBEDTLS_ECP_CURVE25519_OVER_ED25519_ENABLED)
+#include "mbedtls/ed25519.h"
+#endif /* MBEDTLS_ECP_CURVE25519_OVER_ED25519_ENABLED */
 
 #if ( defined(__ARMCC_VERSION) || defined(_MSC_VER) ) && \
     !defined(inline) && !defined(__cplusplus)
@@ -102,14 +102,16 @@ static unsigned long add_count, dbl_count, mul_count;
 #define ECP_MONTGOMERY
 #endif
 
+
 /*
  * Curve types: internal for now, might be exposed later
  */
 typedef enum
 {
     ECP_TYPE_NONE = 0,
-    ECP_TYPE_SHORT_WEIERSTRASS,    /* y^2 = x^3 + a x + b      */
-    ECP_TYPE_MONTGOMERY,           /* y^2 = x^3 + a x^2 + x    */
+    ECP_TYPE_SHORT_WEIERSTRASS,    /* y^2 = x^3 + a x + b          */
+    ECP_TYPE_MONTGOMERY,           /* y^2 = x^3 + a x^2 + x        */
+    ECP_TYPE_EDWARDS,              /* -x^2 + y^2 = 1 - a x^2 y^2   */
 } ecp_curve_type;
 
 /*
@@ -260,9 +262,6 @@ const mbedtls_ecp_curve_info *mbedtls_ecp_curve_info_from_name( const char *name
  */
 static inline ecp_curve_type ecp_get_type( const mbedtls_ecp_group *grp )
 {
-    if( grp->G.X.p == NULL )
-        return( ECP_TYPE_NONE );
-
     if( grp->G.Y.p == NULL )
         return( ECP_TYPE_MONTGOMERY );
     else
@@ -1608,7 +1607,7 @@ cleanup:
 }
 #endif /* ECP_MONTGOMERY */
 
-#if defined(MBEDTLS_ED25519_ECP_ENABLED)
+#if defined(MBEDTLS_ECP_CURVE25519_OVER_ED25519_ENABLED)
 /*
  * Swap given bytes
  */
@@ -1625,7 +1624,9 @@ static void reverse_bytes(unsigned char *first, unsigned char *last) {
         ++first;
     }
 }
+#endif /* MBEDTLS_ECP_CURVE25519_OVER_ED25519_ENABLED */
 
+#if defined(MBEDTLS_ECP_CURVE25519_OVER_ED25519_ENABLED)
 /*
  * Calculate Curve25519 public key
  */
@@ -1634,8 +1635,8 @@ static int mbedtls_curve25519_getpub( mbedtls_ecp_group *grp, mbedtls_ecp_point 
              int (*f_rng)(void *, unsigned char *, size_t), void *p_rng )
 {
     int ret;
-    unsigned char public_key[32];
-    unsigned char private_key[32];
+    unsigned char public_key[MBEDTLS_ED25519_KEY_LEN];
+    unsigned char private_key[MBEDTLS_ED25519_KEY_LEN];
 
     (void) grp;
     (void) P;
@@ -1643,27 +1644,26 @@ static int mbedtls_curve25519_getpub( mbedtls_ecp_group *grp, mbedtls_ecp_point 
     (void) p_rng;
 
     // m -> m(BE) -> m(LE)
-    MBEDTLS_MPI_CHK( mbedtls_mpi_write_binary( m, private_key, sizeof(private_key) ) );
-    reverse_bytes( private_key, private_key + sizeof( private_key ) );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_write_binary( m, private_key, MBEDTLS_ED25519_KEY_LEN ) );
+    reverse_bytes( private_key, private_key + MBEDTLS_ED25519_KEY_LEN );
 
     // compute public key
-    if( curve25519_getpub( public_key, private_key ) )
+    if( mbedtls_curve25519_get_pubkey( public_key, private_key ) )
     {
         ret = MBEDTLS_ERR_ECP_BAD_INPUT_DATA;
         goto cleanup;
     }
 
     // R(LE) -> R(BE) -> R
-    reverse_bytes( public_key, public_key + sizeof( public_key ) );
-    MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary( &R->X, public_key, sizeof( public_key ) ) );
+    reverse_bytes( public_key, public_key + MBEDTLS_ED25519_KEY_LEN );
+    MBEDTLS_MPI_CHK( mbedtls_mpi_read_binary( &R->X, public_key, MBEDTLS_ED25519_KEY_LEN ) );
     MBEDTLS_MPI_CHK( mbedtls_mpi_lset( &R->Z, 1 ) );
     mbedtls_mpi_free( &R->Y );
 
 cleanup:
-    mbedtls_zeroize( private_key, sizeof( private_key ) );
     return( ret );
 }
-#endif /* MBEDTLS_ED25519_ECP_ENABLED */
+#endif /* MBEDTLS_ECP_CURVE25519_OVER_ED25519_ENABLED */
 
 /*
  * Multiplication R = m * P
@@ -1816,6 +1816,19 @@ static int ecp_check_pubkey_mx( const mbedtls_ecp_group *grp, const mbedtls_ecp_
 }
 #endif /* ECP_MONTGOMERY */
 
+#if defined(ECP_EDWARDS)
+/*
+ * Check validity of a public key for Edwards curves with y-only schemes
+ */
+static int ecp_check_pubkey_my( const mbedtls_ecp_group *grp, const mbedtls_ecp_point *pt )
+{
+    /* [Ed25519] Just check Y is the correct number of bytes */
+    if( mbedtls_mpi_size( &pt->Y ) > ( grp->nbits + 7 ) / 8 )
+        return( MBEDTLS_ERR_ECP_INVALID_KEY );
+
+    return( 0 );
+}
+#endif /* ECP_EDWARDS */
 /*
  * Check that a point is valid as a public key
  */
@@ -1887,7 +1900,9 @@ int mbedtls_ecp_gen_keypair_base( mbedtls_ecp_group *grp,
         /* [M225] page 5 */
         size_t b;
 
-        MBEDTLS_MPI_CHK( mbedtls_mpi_fill_random( d, n_size, f_rng, p_rng ) );
+        do {
+            MBEDTLS_MPI_CHK( mbedtls_mpi_fill_random( d, n_size, f_rng, p_rng ) );
+        } while( mbedtls_mpi_bitlen( d ) == 0);
 
         /* Make sure the most significant bit is nbits */
         b = mbedtls_mpi_bitlen( d ) - 1; /* mbedtls_mpi_bitlen is one-based */
@@ -1946,12 +1961,13 @@ cleanup:
     if( ret != 0 )
         return( ret );
 
-#if defined(MBEDTLS_ED25519_ECP_ENABLED)
+#if defined(MBEDTLS_ECP_CURVE25519_OVER_ED25519_ENABLED) && defined(ECP_MONTGOMERY)
     if( grp->id == MBEDTLS_ECP_DP_CURVE25519 )
     {
         return( mbedtls_curve25519_getpub( grp, Q, d, G, f_rng, p_rng ) );
     }
-#endif /* MBEDTLS_ED25519_ECP_ENABLED */
+#endif /* MBEDTLS_ECP_CURVE25519_OVER_ED25519_ENABLED &&  ECP_MONTGOMERY */
+
     return( mbedtls_ecp_mul( grp, Q, d, G, f_rng, p_rng ) );
 }
 

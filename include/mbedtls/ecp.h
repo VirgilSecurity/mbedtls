@@ -61,7 +61,7 @@ typedef enum
     MBEDTLS_ECP_DP_BP256R1,        /*!< 256-bits Brainpool curve */
     MBEDTLS_ECP_DP_BP384R1,        /*!< 384-bits Brainpool curve */
     MBEDTLS_ECP_DP_BP512R1,        /*!< 512-bits Brainpool curve */
-    MBEDTLS_ECP_DP_CURVE25519,           /*!< Curve25519               */
+    MBEDTLS_ECP_DP_CURVE25519,     /*!< Curve25519               */
     MBEDTLS_ECP_DP_SECP192K1,      /*!< 192-bits "Koblitz" curve */
     MBEDTLS_ECP_DP_SECP224K1,      /*!< 224-bits "Koblitz" curve */
     MBEDTLS_ECP_DP_SECP256K1,      /*!< 256-bits "Koblitz" curve */
@@ -106,9 +106,10 @@ mbedtls_ecp_point;
  * \brief           ECP group structure
  *
  * We consider two types of curves equations:
- * 1. Short Weierstrass y^2 = x^3 + A x + B     mod P   (SEC1 + RFC 4492)
- * 2. Montgomery,       y^2 = x^3 + A x^2 + x   mod P   (Curve25519 + draft)
- * In both cases, a generator G for a prime-order subgroup is fixed. In the
+ * 1. Short Weierstrass y^2 = x^3 + A x + B          mod P   (SEC1 + RFC 4492)
+ * 2. Montgomery,       y^2 = x^3 + A x^2 + x        mod P   (Curve25519 + draft)
+ * 3. Edwards           -x^2 + y^2 = 1 - a x^2 y^2   mod P   (Ed25519 + draft)
+ * In all cases, a generator G for a prime-order subgroup is fixed. In the
  * short weierstrass, this subgroup is actually the whole curve, and its
  * cardinal is denoted by N.
  *
@@ -119,6 +120,9 @@ mbedtls_ecp_point;
  * the quantity actually used in the formulas. Also, nbits is not the size of N
  * but the required size for private keys.
  *
+ * In the case of Edward curves, we don't store A at all.
+ * Also, nbits is not the size of N but the required size for private keys.
+ *
  * If modp is NULL, reduction modulo P is done using a generic algorithm.
  * Otherwise, it must point to a function that takes an mbedtls_mpi in the range
  * 0..2^(2*pbits)-1 and transforms it in-place in an integer of little more
@@ -128,21 +132,21 @@ mbedtls_ecp_point;
  */
 typedef struct
 {
-    mbedtls_ecp_group_id id;    /*!<  internal group identifier                     */
-    mbedtls_mpi P;              /*!<  prime modulus of the base field               */
-    mbedtls_mpi A;              /*!<  1. A in the equation, or 2. (A + 2) / 4       */
-    mbedtls_mpi B;              /*!<  1. B in the equation, or 2. unused            */
-    mbedtls_ecp_point G;        /*!<  generator of the (sub)group used              */
-    mbedtls_mpi N;              /*!<  1. the order of G, or 2. unused               */
-    size_t pbits;       /*!<  number of bits in P                           */
-    size_t nbits;       /*!<  number of bits in 1. P, or 2. private keys    */
-    unsigned int h;     /*!<  internal: 1 if the constants are static       */
-    int (*modp)(mbedtls_mpi *); /*!<  function for fast reduction mod P             */
-    int (*t_pre)(mbedtls_ecp_point *, void *);  /*!< unused                         */
-    int (*t_post)(mbedtls_ecp_point *, void *); /*!< unused                         */
-    void *t_data;                       /*!< unused                         */
-    mbedtls_ecp_point *T;       /*!<  pre-computed points for ecp_mul_comb()        */
-    size_t T_size;      /*!<  number for pre-computed points                */
+    mbedtls_ecp_group_id id;    /*!<  internal group identifier                                         */
+    mbedtls_mpi P;              /*!<  prime modulus of the base field                                   */
+    mbedtls_mpi A;              /*!<  1. A in the equation, or 2. (A + 2) / 4, or 3. unused             */
+    mbedtls_mpi B;              /*!<  1. B in the equation, or 2. unused, or 3. unused                  */
+    mbedtls_ecp_point G;        /*!<  generator of the (sub)group used                                  */
+    mbedtls_mpi N;              /*!<  1. the order of G, or 2. unused, or 3. unused                     */
+    size_t pbits;               /*!<  number of bits in P                                               */
+    size_t nbits;               /*!<  number of bits in 1. P, or 2. private keys, or 3. private keys    */
+    unsigned int h;             /*!<  internal: 1 if the constants are static                           */
+    int (*modp)(mbedtls_mpi *); /*!<  function for fast reduction mod P                                 */
+    int (*t_pre)(mbedtls_ecp_point *, void *);  /*!< unused                                             */
+    int (*t_post)(mbedtls_ecp_point *, void *); /*!< unused                                             */
+    void *t_data;               /*!< unused                                                             */
+    mbedtls_ecp_point *T;       /*!<  pre-computed points for ecp_mul_comb()                            */
+    size_t T_size;              /*!<  number for pre-computed points                                    */
 }
 mbedtls_ecp_group;
 

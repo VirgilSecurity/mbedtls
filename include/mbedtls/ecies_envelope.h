@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2015 Virgil Security Inc.
+ * Copyright (C) 2015-2016 Virgil Security Inc.
  *
  * Lead Maintainer: Virgil Security Inc. <support@virgilsecurity.com>
  *
@@ -101,7 +101,6 @@
 #include MBEDTLS_CONFIG_FILE
 #endif
 
-#include "ecp.h"
 #include "md.h"
 #include "kdf.h"
 #include "cipher.h"
@@ -118,11 +117,6 @@ int mbedtls_ecies_read_envelope(unsigned char **p, const unsigned char *end, siz
  * \brief Read envelope version.
  */
 int mbedtls_ecies_read_version(unsigned char **p, const unsigned char *end, int *version);
-/**
- * \brief Read originator public key as ECP key pair.
- */
-int mbedtls_ecies_read_originator(unsigned char **p, const unsigned char *end,
-        mbedtls_ecp_keypair **originator_keypair);
 /**
  * \brief Read key derivation function and underlying digest function.
  */
@@ -149,12 +143,6 @@ int mbedtls_ecies_write_envelope(unsigned char **p, unsigned char *start, size_t
  * \return The length written or a negative error code.
  */
 int mbedtls_ecies_write_version(unsigned char **p, unsigned char *start, int version);
-/**
- * \brief Write originator public key as ECP key pair.
- * \return The length written or a negative error code.
- */
-int mbedtls_ecies_write_originator(unsigned char **p, unsigned char *start,
-        mbedtls_ecp_keypair *originator_keypair);
 /**
  * \brief Write key derivation function and underlying digest function.
  * \return The length written or a negative error code.

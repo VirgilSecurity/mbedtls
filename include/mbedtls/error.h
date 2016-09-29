@@ -80,6 +80,7 @@
  * RSA       4   9
  * ECP       4   8 (Started from top)
  * ECIES     4   4 (Started from top after ECP)
+ * FAST_EC   4   7 (Started from top after ECIES)
  * MD        5   4
  * KDF       5   1 (Started from top)
  * CIPHER    6   6

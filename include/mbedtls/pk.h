@@ -44,6 +44,10 @@
 #include "ecdsa.h"
 #endif
 
+#if defined(MBEDTLS_FAST_EC_C)
+#include "fast_ec.h"
+#endif
+
 #if ( defined(__ARMCC_VERSION) || defined(_MSC_VER) ) && \
     !defined(inline) && !defined(__cplusplus)
 #define inline __inline
@@ -79,6 +83,8 @@ typedef enum {
     MBEDTLS_PK_ECDSA,
     MBEDTLS_PK_RSA_ALT,
     MBEDTLS_PK_RSASSA_PSS,
+    MBEDTLS_PK_X25519,
+    MBEDTLS_PK_ED25519,
 } mbedtls_pk_type_t;
 
 /**
@@ -154,6 +160,59 @@ static inline mbedtls_ecp_keypair *mbedtls_pk_ec( const mbedtls_pk_context pk )
     return( (mbedtls_ecp_keypair *) (pk).pk_ctx );
 }
 #endif /* MBEDTLS_ECP_C */
+
+#if defined(MBEDTLS_FAST_EC_C)
+/**
+ * Quick access to an Fast EC context inside a PK context.
+ *
+ * \warning You must make sure the PK context actually holds an Fast EC context
+ * before using this function!
+ */
+static inline mbedtls_fast_ec_keypair_t *mbedtls_pk_fast_ec( const mbedtls_pk_context pk )
+{
+    return( (mbedtls_fast_ec_keypair_t *) (pk).pk_ctx );
+}
+
+/**
+ * Transform PK type to Fast EC type.
+ *
+ * \note This transformation is possible because Fast EC type always maps
+ * to the correspond value of PK type.
+ */
+static inline mbedtls_fast_ec_type_t mbedtls_pk_fast_ec_type( mbedtls_pk_type_t type )
+{
+    switch( type )
+    {
+        case MBEDTLS_PK_X25519:
+            return( MBEDTLS_FAST_EC_X25519 );
+        case MBEDTLS_PK_ED25519:
+            return( MBEDTLS_FAST_EC_ED25519 );
+        default:
+            return( MBEDTLS_FAST_EC_NONE );
+    }
+}
+
+/**
+ * Construct PK type from Fast EC type.
+ *
+ * \note This transformation is possible because Fast EC type always maps
+ * to the correspond value of PK type.
+ */
+static inline mbedtls_pk_type_t mbedtls_pk_from_fast_ec_type( mbedtls_fast_ec_type_t type )
+{
+    switch( type )
+    {
+        case MBEDTLS_FAST_EC_X25519:
+            return( MBEDTLS_PK_X25519 );
+        case MBEDTLS_FAST_EC_ED25519:
+            return( MBEDTLS_PK_ED25519 );
+        default:
+            return( MBEDTLS_PK_NONE );
+    }
+}
+
+
+#endif /* MBEDTLS_FAST_EC_C */
 
 #if defined(MBEDTLS_PK_RSA_ALT_SUPPORT)
 /**
@@ -496,11 +555,12 @@ int mbedtls_pk_parse_keyfile( mbedtls_pk_context *ctx,
  * \brief           Load and parse a public key
  *
  * \param ctx       key to be initialized
- * \param path      filename to read the private key from
+ * \param path      filename to read the public key from
  *
  * \note            On entry, ctx must be empty, either freshly initialised
- *                  with mbedtls_pk_init() or reset with mbedtls_pk_free(). If you need a
- *                  specific key type, check the result with mbedtls_pk_can_do().
+ *                  with mbedtls_pk_init() or reset with mbedtls_pk_free(). If
+ *                  you need a specific key type, check the result with
+ *                  mbedtls_pk_can_do().
  *
  * \note            The key is also checked for correctness.
  *

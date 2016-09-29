@@ -9,6 +9,7 @@ script:
 - tests/scripts/check-generated-files.sh
 - tests/scripts/check-doxy-blocks.pl
 - tests/scripts/check-names.sh
+- tests/scripts/doxygen.sh
 - cmake -D CMAKE_BUILD_TYPE:String="Check" .
 - make
 - make test
@@ -18,11 +19,17 @@ script:
 - tests/scripts/test-ref-configs.pl
 - tests/scripts/curves.pl
 - tests/scripts/key-exchanges.pl
+after_failure:
+- tests/scripts/travis-log-failure.sh
 env:
   global:
     secure: "h8SbQY2B7QC6rg6EtUgRgV2sgUf58QYdStdgA8wbKluoz1Km7Q0bgtdcpnyFrfOK84G4yJQifNW3OohBnqfjCmQNsVBYHExMTEqzcDVCYLV0eFdDHf3SJnp4wJYQ21ZXpzinZYww8lOhyMSjaoi9vnxZGbJyLW6Y/Zwa68KTSbc="
 
 addons:
+  apt:
+    packages:
+    - doxygen
+    - graphviz
   coverity_scan:
     project:
       name: "VirgilSecurity/mbedtls"

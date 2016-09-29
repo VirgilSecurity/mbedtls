@@ -32,6 +32,7 @@
 #include "mbedtls/oid.h"
 
 #include <string.h>
+#include <mbedtls/fast_ec.h>
 
 #if defined(MBEDTLS_RSA_C)
 #include "mbedtls/rsa.h"
@@ -50,6 +51,9 @@
 #endif
 #if defined(MBEDTLS_PKCS12_C)
 #include "mbedtls/pkcs12.h"
+#endif
+#if defined(MBEDTLS_FAST_EC_C)
+#include "mbedtls/fast_ec.h"
 #endif
 
 #if defined(MBEDTLS_PLATFORM_C)
@@ -537,6 +541,57 @@ static int pk_get_rsapubkey( unsigned char **p,
 }
 #endif /* MBEDTLS_RSA_C */
 
+#if defined(MBEDTLS_FAST_EC_C)
+
+static int pk_get_fast_ec_pubkey( unsigned char **p,
+                                  const unsigned char *end,
+                                  mbedtls_fast_ec_keypair_t *fast_ec,
+                                  mbedtls_pk_type_t pk_alg )
+{
+    int ret = 0;
+
+    if( end - *p < (int) mbedtls_fast_ec_get_key_len( fast_ec->info ) )
+        return( MBEDTLS_ERR_PK_KEY_INVALID_FORMAT );
+
+    if( ( ret = mbedtls_fast_ec_setup( fast_ec, mbedtls_fast_ec_info_from_type(
+                    mbedtls_pk_fast_ec_type( pk_alg ) ) ) ) != 0 )
+    {
+        return( ret );
+    }
+
+    memcpy( fast_ec->public_key, *p, mbedtls_fast_ec_get_key_len( fast_ec->info ) );
+    *p += mbedtls_fast_ec_get_key_len( fast_ec->info );
+    return ( 0 );
+}
+
+static int pk_get_fast_ec_key( unsigned char **p,
+                               const unsigned char *end,
+                               mbedtls_fast_ec_keypair_t *fast_ec,
+                               mbedtls_pk_type_t pk_alg )
+{
+    int ret = 0;
+    size_t len = 0;
+
+    if( ( ret = mbedtls_fast_ec_setup( fast_ec, mbedtls_fast_ec_info_from_type(
+                    mbedtls_pk_fast_ec_type( pk_alg ) ) ) ) != 0 )
+    {
+        return( ret );
+    }
+
+    if( ( ret = mbedtls_asn1_get_tag( p, end, &len, MBEDTLS_ASN1_OCTET_STRING ) ) != 0 )
+        return( MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret );
+
+    if( len != mbedtls_fast_ec_get_key_len( fast_ec->info ))
+        return( MBEDTLS_ERR_PK_KEY_INVALID_FORMAT );
+
+    memcpy( fast_ec->private_key, *p, mbedtls_fast_ec_get_key_len( fast_ec->info ) );
+    *p += mbedtls_fast_ec_get_key_len( fast_ec->info );
+
+    return( mbedtls_fast_ec_compute_pub( fast_ec ) );
+}
+
+#endif /* MBEDTLS_FAST_EC_C */
+
 /* Get a PK algorithm identifier
  *
  *  AlgorithmIdentifier  ::=  SEQUENCE  {
@@ -623,6 +678,12 @@ int mbedtls_pk_parse_subpubkey( unsigned char **p, const unsigned char *end,
             ret = pk_get_ecpubkey( p, end, mbedtls_pk_ec( *pk ) );
     } else
 #endif /* MBEDTLS_ECP_C */
+#if defined (MBEDTLS_FAST_EC_C)
+    if( pk_alg == MBEDTLS_PK_X25519 || pk_alg == MBEDTLS_PK_ED25519 )
+    {
+        ret = pk_get_fast_ec_pubkey( p, end, mbedtls_pk_fast_ec( *pk ), pk_alg );
+    } else
+#endif
         ret = MBEDTLS_ERR_PK_UNKNOWN_PK_ALG;
 
     if( ret == 0 && *p != end )
@@ -925,7 +986,20 @@ static int pk_parse_key_pkcs8_unencrypted_der(
         }
     } else
 #endif /* MBEDTLS_ECP_C */
-        return( MBEDTLS_ERR_PK_UNKNOWN_PK_ALG );
+#if defined (MBEDTLS_FAST_EC_C)
+    if( pk_alg == MBEDTLS_PK_X25519 || pk_alg == MBEDTLS_PK_ED25519 )
+    {
+        if ( ( ret = pk_get_fast_ec_key( &p, end, mbedtls_pk_fast_ec( *pk ), pk_alg ) ) != 0 )
+        {
+            mbedtls_pk_free( pk );
+            return( ret );
+        }
+    } else
+#endif
+    {
+        mbedtls_pk_free( pk );
+        return (MBEDTLS_ERR_PK_UNKNOWN_PK_ALG);
+    }
 
     return( 0 );
 }

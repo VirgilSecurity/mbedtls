@@ -65,7 +65,8 @@ OBJS_CRYPTO=	aes.o		aesni.o		arc4.o		\
 		timing.o	version.o			\
 		version_features.o		xtea.o	\
 		kdf.o kdf1.o kdf2.o kdf_wrap.o	\
-		ecies.o	ecies_envelope.o
+		fast_ec.o	fast_ec_wrap.o	\
+		ecies.o	ecies_wrap.o	ecies_envelope.o
 
 OBJS_X509=	certs.o		pkcs11.o	x509.o		\
 		x509_create.o	x509_crl.o	x509_crt.o	\
@@ -76,10 +77,28 @@ OBJS_TLS=	debug.o		net.o		ssl_cache.o	\
 		ssl_cookie.o	ssl_srv.o	ssl_ticket.o	\
 		ssl_tls.o
 
-OBJS_ED25519=	ed25519/fe.o	ed25519/ge.o	ed25519/sc.o	\
-		ed25519/sha512.o	ed25519/sign.o	ed25519/verify.o	\
-		ed25519/key_exchange.o	ed25519/curve25519.o
+ifeq ($(USE_ED25519_AMD64_RADIX_64_24K_OPTIMIZATION),1)
+	OBJS_ED25519_IMPL_DIR := amd64_64_24k
+endif
 
+ifeq ($(USE_ED25519_AMD64_RADIX_51_30K_OPTIMIZATION),1)
+	OBJS_ED25519_IMPL_DIR := amd64_51_30k
+endif
+
+ifeq ($(OBJS_ED25519_IMPL_DIR),)
+	OBJS_ED25519_IMPL_DIR := ref10
+endif
+
+ifndef WINDOWS
+	OBJS_ED25519_COMMON_C := $(patsubst %.c,%.o,$(wildcard ed25519/common/*.c))
+	OBJS_ED25519_IMPL_C := $(patsubst %.c,%.o,$(wildcard ed25519/$(OBJS_ED25519_IMPL_DIR)/*.c))
+	OBJS_ED25519_IMPL_S := $(patsubst %.s,%.o,$(wildcard ed25519/$(OBJS_ED25519_IMPL_DIR)/*.s))
+else
+	OBJS_ED25519_COMMON_C := $(patsubst %.c,%.o,$(wildcard ed25519\\common\\*.c))
+	OBJS_ED25519_IMPL_C := $(patsubst %.c,%.o,$(wildcard ed25519\\$(OBJS_ED25519_IMPL_DIR)\\*.c))
+	OBJS_ED25519_IMPL_S := $(patsubst %.s,%.o,$(wildcard ed25519\\$(OBJS_ED25519_IMPL_DIR)\\*.s))
+endif
+OBJS_ED25519 := $(OBJS_ED25519_COMMON_C) $(OBJS_ED25519_IMPL_C) $(OBJS_ED25519_IMPL_S)
 
 .SILENT:
 
@@ -98,9 +117,9 @@ shared: libmbedcrypto.$(DLEXT) libmbedx509.$(DLEXT) libmbedtls.$(DLEXT) libed255
 # tls
 libmbedtls.a: $(OBJS_TLS)
 	echo "  AR    $@"
-	$(AR) rc $@ $(OBJS_TLS)
+	$(AR) -rc $@ $(OBJS_TLS)
 	echo "  RL    $@"
-	$(AR) s $@
+	$(AR) -s $@
 
 libmbedtls.$(SOEXT_TLS): $(OBJS_TLS) libmbedx509.so
 	echo "  LD    $@"
@@ -121,9 +140,9 @@ libmbedtls.dll: $(OBJS_TLS) libmbedx509.dll
 # x509
 libmbedx509.a: $(OBJS_X509)
 	echo "  AR    $@"
-	$(AR) rc $@ $(OBJS_X509)
+	$(AR) -rc $@ $(OBJS_X509)
 	echo "  RL    $@"
-	$(AR) s $@
+	$(AR) -s $@
 
 libmbedx509.$(SOEXT_X509): $(OBJS_X509) libmbedcrypto.so
 	echo "  LD    $@"
@@ -144,9 +163,9 @@ libmbedx509.dll: $(OBJS_X509) libmbedcrypto.dll
 # crypto
 libmbedcrypto.a: $(OBJS_CRYPTO)
 	echo "  AR    $@"
-	$(AR) rc $@ $(OBJS_CRYPTO)
+	$(AR) -rc $@ $(OBJS_CRYPTO)
 	echo "  RL    $@"
-	$(AR) s $@
+	$(AR) -s $@
 
 libmbedcrypto.$(SOEXT_CRYPTO): $(OBJS_CRYPTO)
 	echo "  LD    $@"
@@ -187,13 +206,18 @@ libed25519.dll: $(OBJS_ED25519)
 	echo "  LD    $@"
 	$(CC) -shared -Wl,-soname,$@ -Wl,--out-implib,$@.a -o $@ $(OBJS_ED25519) -lws2_32 -lwinmm -lgdi32 -static-libgcc $(LOCAL_LDFLAGS) $(LDFLAGS)
 
-.c.o:
+%.o : %.c
+	echo "  CC    $<"
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -c -o $@ $<
+
+%.o : %.s
 	echo "  CC    $<"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) -c -o $@ $<
 
 clean:
 ifndef WINDOWS
-	rm -f *.o ed25519/*o libmbed* libed25519*
+	find . -type f -name '*.o' -exec rm {} +
+	rm -f *libmbed* libed25519*
 else
-	del /Q /F *.o ed25519\*.o libmbed* libed25519*
+	del /Q /F /S *.o libmbed* libed25519*
 endif

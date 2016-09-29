@@ -51,6 +51,9 @@
 #if defined(MBEDTLS_PKCS12_C)
 #include "mbedtls/pkcs12.h"
 #endif
+#if defined(MBEDTLS_FAST_EC_C)
+#include "mbedtls/fast_ec.h"
+#endif
 
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
@@ -133,6 +136,32 @@ static int pk_write_ec_param( unsigned char **p, unsigned char *start,
 }
 #endif /* MBEDTLS_ECP_C */
 
+#if defined(MBEDTLS_FAST_EC_C)
+static int pk_write_fast_ec_pubkey( unsigned char **p, unsigned char *start,
+                                    mbedtls_fast_ec_keypair_t *fast_ec )
+{
+    int ret;
+    size_t len = 0;
+
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_raw_buffer(
+            p, start, fast_ec->public_key, mbedtls_fast_ec_get_key_len( fast_ec->info ) ) );
+
+    return( (int) len );
+}
+
+static int pk_write_fast_ec_key( unsigned char **p, unsigned char *start,
+                                 mbedtls_fast_ec_keypair_t *fast_ec )
+{
+    int ret;
+    size_t len = 0;
+
+    MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_octet_string(
+            p, start, fast_ec->private_key, mbedtls_fast_ec_get_key_len( fast_ec->info ) ) );
+
+    return( (int) len );
+}
+#endif /* MBEDTLS_FAST_EC_C */
+
 int mbedtls_pk_write_pubkey( unsigned char **p, unsigned char *start,
                      const mbedtls_pk_context *key )
 {
@@ -149,6 +178,11 @@ int mbedtls_pk_write_pubkey( unsigned char **p, unsigned char *start,
         MBEDTLS_ASN1_CHK_ADD( len, pk_write_ec_pubkey( p, start, mbedtls_pk_ec( *key ) ) );
     else
 #endif
+#if defined(MBEDTLS_FAST_EC_C)
+    if( mbedtls_pk_get_type( key ) == MBEDTLS_PK_X25519 || mbedtls_pk_get_type( key ) == MBEDTLS_PK_ED25519 )
+        MBEDTLS_ASN1_CHK_ADD( len, pk_write_fast_ec_pubkey( p, start, mbedtls_pk_fast_ec( *key ) ) );
+    else
+#endif
         return( MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE );
 
     return( (int) len );
@@ -160,7 +194,6 @@ int mbedtls_pk_write_pubkey_der( mbedtls_pk_context *key, unsigned char *buf, si
     unsigned char *c;
     size_t len = 0, par_len = 0, oid_len;
     const char *oid;
-
     c = buf + size;
 
     MBEDTLS_ASN1_CHK_ADD( len, mbedtls_pk_write_pubkey( &c, buf, key ) );
@@ -192,6 +225,12 @@ int mbedtls_pk_write_pubkey_der( mbedtls_pk_context *key, unsigned char *buf, si
     }
 #endif
 
+#if defined(MBEDTLS_FAST_EC_C)
+    if( mbedtls_pk_get_type( key ) == MBEDTLS_PK_X25519 || mbedtls_pk_get_type( key ) == MBEDTLS_PK_ED25519 )
+    {
+        MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_algorithm_identifier_no_params( &c, buf, oid, oid_len ) );
+    } else
+#endif
     MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_algorithm_identifier( &c, buf, oid, oid_len,
                                                         par_len ) );
 
@@ -283,6 +322,11 @@ int mbedtls_pk_write_key_der( mbedtls_pk_context *key, unsigned char *buf, size_
     }
     else
 #endif /* MBEDTLS_ECP_C */
+#if defined(MBEDTLS_FAST_EC_C)
+    if( mbedtls_pk_get_type( key ) == MBEDTLS_PK_X25519 || mbedtls_pk_get_type( key ) == MBEDTLS_PK_ED25519 )
+        return mbedtls_pk_write_key_pkcs8_der(key, buf, size, NULL, 0, NULL, 0);
+    else
+#endif
         return( MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE );
 
     return( (int) len );
@@ -365,6 +409,11 @@ int mbedtls_pk_write_key_pkcs8_der( mbedtls_pk_context *key, unsigned char *buf,
     }
     else
 #endif /* MBEDTLS_ECP_C */
+#if defined(MBEDTLS_FAST_EC_C)
+    if( mbedtls_pk_get_type( key ) == MBEDTLS_PK_X25519 || mbedtls_pk_get_type( key ) == MBEDTLS_PK_ED25519 )
+        MBEDTLS_ASN1_CHK_ADD( len, pk_write_fast_ec_key( &c, buf, mbedtls_pk_fast_ec( *key ) ) );
+    else
+#endif
         return( MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE );
 
     /*
@@ -399,6 +448,12 @@ int mbedtls_pk_write_key_pkcs8_der( mbedtls_pk_context *key, unsigned char *buf,
     }
 #endif
 
+#if defined(MBEDTLS_FAST_EC_C)
+    if( mbedtls_pk_get_type( key ) == MBEDTLS_PK_X25519 || mbedtls_pk_get_type( key ) == MBEDTLS_PK_ED25519 )
+    {
+        MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_algorithm_identifier_no_params( &c, buf, oid, oid_len ) );
+    } else
+#endif
     MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_algorithm_identifier( &c, buf, oid, oid_len, par_len ) );
 
     /* version */
@@ -672,6 +727,11 @@ int mbedtls_pk_write_key_pem( mbedtls_pk_context *key, unsigned char *buf, size_
     unsigned char output_buf[PRV_DER_MAX_BYTES];
     const char *begin, *end;
     size_t olen = 0;
+
+#if defined(MBEDTLS_FAST_EC_C)
+    if( mbedtls_pk_get_type( key ) == MBEDTLS_PK_X25519 || mbedtls_pk_get_type( key ) == MBEDTLS_PK_ED25519 )
+        return mbedtls_pk_write_key_pkcs8_pem(key, buf, size, NULL, 0, NULL, 0);
+#endif
 
     if( ( ret = mbedtls_pk_write_key_der( key, output_buf, sizeof(output_buf) ) ) < 0 )
         return( ret );

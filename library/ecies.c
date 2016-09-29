@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2015 Virgil Security Inc.
+ * Copyright (C) 2015-2016 Virgil Security Inc.
  *
  * Lead Maintainer: Virgil Security Inc. <support@virgilsecurity.com>
  *
@@ -48,10 +48,10 @@
 #if defined(MBEDTLS_ECIES_C)
 
 #include "mbedtls/ecies.h"
+#include "mbedtls/ecies_internal.h"
 #include "mbedtls/ecies_envelope.h"
 
 #include "mbedtls/cipher.h"
-#include "mbedtls/ecdh.h"
 #include "mbedtls/md.h"
 #include "mbedtls/kdf.h"
 
@@ -60,7 +60,7 @@
 #else
 #include <stdlib.h>
 #define mbedtls_calloc    calloc
-#define mbedtls_free       free
+#define mbedtls_free      free
 #endif
 
 #define INVOKE_AND_CHECK(result,invocation) \
@@ -81,48 +81,44 @@ do { \
 
 #define ECIES_ENVELOPE_VERSION 0
 
-static int ecies_ka(mbedtls_ecp_keypair *public, const mbedtls_ecp_keypair *private,
-        mbedtls_mpi *shared, int(*f_rng)(void *, unsigned char *, size_t), void *p_rng)
-{
-    if (public == NULL || private == NULL || shared == NULL) {
-        return MBEDTLS_ERR_ECIES_BAD_INPUT_DATA;
-    }
-    if (public->grp.id != private->grp.id) {
-        return MBEDTLS_ERR_ECIES_BAD_INPUT_DATA;
-    }
-    return mbedtls_ecdh_compute_shared(&public->grp, shared, &public->Q, &private->d,
-            f_rng, p_rng);
-}
-
-int mbedtls_ecies_encrypt(mbedtls_ecp_keypair *key, const unsigned char *input, size_t ilen,
+int mbedtls_ecies_encrypt(void *key, const mbedtls_ecies_info_t* info,
+        const unsigned char *input, size_t ilen,
         unsigned char *output, size_t *olen, size_t osize,
         int (*f_rng)(void *, unsigned char *, size_t), void *p_rng)
 {
     int result = 0;
-    mbedtls_ecp_keypair ephemeral_key;
-    mbedtls_mpi shared_key;
-    unsigned char *shared_key_binary = NULL; // MUST be released
-    size_t shared_key_binary_len = 0;
+
     const mbedtls_md_info_t *md_info = NULL;
     const mbedtls_kdf_info_t *kdf_info = NULL;
     const mbedtls_md_info_t *hmac_info = NULL;
+
+    void* ephemeral_key = NULL; // MUST be released
+
+    unsigned char *shared_key = NULL; // MUST be released
+    size_t shared_key_len = 0;
+
     unsigned char *kdf_value = NULL; // MUST be released
     size_t hmac_len = 0;
+
     unsigned char *hmac = NULL; // MUST be released
     size_t kdf_len = 0;
+
     unsigned char *cipher_key = NULL; // pointer inside data: kdf_value
     size_t cipher_key_len = 0;
+
     unsigned char *cipher_iv = NULL; // MUST be released
     size_t cipher_iv_len = 0;
+
     unsigned char *hmac_key = NULL; // pointer inside data: kdf_value
     size_t hmac_key_len = 0;
+
     mbedtls_cipher_context_t cipher_ctx;
     size_t cipher_block_size = 0;
     size_t cipher_enc_data_len = 0;
     size_t cipher_enc_header_len = 0;
     unsigned char *cipher_enc_data = NULL; // pointer inside data: output
 
-    if (key == NULL || input == NULL || output == NULL || olen == NULL) {
+    if (key == NULL || info == NULL || input == NULL || output == NULL || olen == NULL) {
         return MBEDTLS_ERR_ECIES_BAD_INPUT_DATA;
     }
 
@@ -133,8 +129,6 @@ int mbedtls_ecies_encrypt(mbedtls_ecp_keypair *key, const unsigned char *input, 
     kdf_info = mbedtls_kdf_info_from_type(MBEDTLS_ECIES_KDF_TYPE);
     hmac_info = mbedtls_md_info_from_type(MBEDTLS_ECIES_HMAC_TYPE);
 
-    mbedtls_mpi_init(&shared_key);
-    mbedtls_ecp_keypair_init(&ephemeral_key);
     mbedtls_cipher_init(&cipher_ctx);
     INVOKE_AND_CHECK(result,
         mbedtls_cipher_setup(&cipher_ctx, mbedtls_cipher_info_from_type(MBEDTLS_ECIES_CIPHER_TYPE))
@@ -155,24 +149,25 @@ int mbedtls_ecies_encrypt(mbedtls_ecp_keypair *key, const unsigned char *input, 
     hmac_key = kdf_value + cipher_key_len;
 
     // 1. Generate ephemeral keypair.
-    INVOKE_AND_CHECK(result,
-        mbedtls_ecp_gen_key(key->grp.id, &ephemeral_key, f_rng, p_rng)
-    );
-    // 2. Compute shared secret key.
-    INVOKE_AND_CHECK(result,
-        ecies_ka(key, &ephemeral_key, &shared_key, f_rng, p_rng)
-    );
-    shared_key_binary_len = ECIES_SIZE_TO_OCTETS(key->grp.pbits);
-    shared_key_binary = mbedtls_calloc(1, shared_key_binary_len);
-    if (shared_key_binary == NULL) {
+    ephemeral_key = info->key_alloc_func();
+    if (ephemeral_key == NULL) {
         INVOKE_AND_CHECK(result, MBEDTLS_ERR_ECIES_ALLOC_FAILED)
     }
     INVOKE_AND_CHECK(result,
-        mbedtls_mpi_write_binary(&shared_key, shared_key_binary, shared_key_binary_len)
+        info->key_gen_ephemeral_func(key, ephemeral_key, f_rng, p_rng)
+    );
+    // 2. Compute shared secret key.
+    shared_key_len = info->key_get_shared_len_func(key);
+    shared_key = mbedtls_calloc(1, shared_key_len);
+    if (shared_key == NULL) {
+        INVOKE_AND_CHECK(result, MBEDTLS_ERR_ECIES_ALLOC_FAILED)
+    }
+    INVOKE_AND_CHECK(result,
+        info->key_compute_shared_func(key, ephemeral_key, shared_key, shared_key_len, f_rng, p_rng)
     );
     // 3. Derive keys (encryption key and hmac key).
     INVOKE_AND_CHECK(result,
-        mbedtls_kdf(kdf_info, md_info, shared_key_binary, shared_key_binary_len,
+        mbedtls_kdf(kdf_info, md_info, shared_key, shared_key_len,
                 kdf_value, kdf_len)
     );
     // 4. Encrypt given message.
@@ -228,7 +223,7 @@ int mbedtls_ecies_encrypt(mbedtls_ecp_keypair *key, const unsigned char *input, 
                 mbedtls_md_get_type(md_info))
     );
     ACCUMULATE_AND_CHECK(result, cipher_enc_header_len,
-        mbedtls_ecies_write_originator(&cipher_enc_data, output, &ephemeral_key)
+        info->key_write_pub_asn1_func(&cipher_enc_data, output, ephemeral_key)
     );
     ACCUMULATE_AND_CHECK(result, cipher_enc_header_len,
         mbedtls_ecies_write_version(&cipher_enc_data, output, ECIES_ENVELOPE_VERSION)
@@ -240,11 +235,10 @@ int mbedtls_ecies_encrypt(mbedtls_ecp_keypair *key, const unsigned char *input, 
     memset(output + cipher_enc_header_len, 0, osize - cipher_enc_header_len);
 exit:
     *olen = cipher_enc_header_len;
+    info->key_free_func(ephemeral_key);
     mbedtls_cipher_free(&cipher_ctx);
-    mbedtls_ecp_keypair_free(&ephemeral_key);
-    mbedtls_mpi_free(&shared_key);
-    if (shared_key_binary != NULL) {
-        mbedtls_free(shared_key_binary);
+    if (shared_key != NULL) {
+        mbedtls_free(shared_key);
     }
     if (kdf_value != NULL) {
         mbedtls_free(kdf_value);
@@ -259,31 +253,41 @@ exit:
 }
 
 
-int mbedtls_ecies_decrypt(mbedtls_ecp_keypair *key, const unsigned char *input, size_t ilen,
+int mbedtls_ecies_decrypt(void *key, const mbedtls_ecies_info_t* info,
+         const unsigned char *input, size_t ilen,
         unsigned char *output, size_t *olen, size_t osize,
         int (*f_rng)(void *, unsigned char *, size_t), void *p_rng)
 {
     int result = 0;
     int version = 0;
-    mbedtls_ecp_keypair *ephemeral_key = NULL; // MUST be released
-    mbedtls_mpi shared_key;
-    unsigned char *shared_key_binary = NULL; // MUST be released
-    size_t shared_key_binary_len = 0;
+
+    void *ephemeral_key = NULL; // MUST be released
+
     mbedtls_md_type_t md_type = MBEDTLS_MD_NONE;
     mbedtls_kdf_type_t kdf_type = MBEDTLS_KDF_NONE;
     mbedtls_md_type_t hmac_type = MBEDTLS_MD_NONE;
+
+    unsigned char *shared_key = NULL; // MUST be released
+    size_t shared_key_len = 0;
+
     unsigned char *kdf_value = NULL; // MUST be released
-    size_t hmac_base_len = 0;
-    unsigned char *hmac_base = NULL; // pointer inside data: input
-    size_t hmac_len = 0;
-    unsigned char *hmac = NULL; // MUST be released
     size_t kdf_len = 0;
+
+    unsigned char *hmac_base = NULL; // pointer inside data: input
+    size_t hmac_base_len = 0;
+
+    unsigned char *hmac = NULL; // MUST be released
+    size_t hmac_len = 0;
+
     unsigned char *cipher_key = NULL; // pointer inside data: kdf_value
     size_t cipher_key_len = 0;
+
     unsigned char *hmac_key = NULL; // pointer inside data: kdf_value
     size_t hmac_key_len = 0;
+
     unsigned char *cipher_iv = NULL; // pointer inside data: input
     size_t cipher_iv_len = 0;
+
     mbedtls_cipher_type_t cipher_type = MBEDTLS_CIPHER_NONE;
     mbedtls_cipher_context_t cipher_ctx;
     size_t cipher_enc_data_len = 0;
@@ -291,15 +295,21 @@ int mbedtls_ecies_decrypt(mbedtls_ecp_keypair *key, const unsigned char *input, 
     unsigned char *cipher_enc_data = NULL; // pointer inside data: input
     unsigned char *cipher_enc_header = NULL; // pointer inside data: input
 
-    if (key == NULL || input == NULL || output == NULL || olen == NULL) {
+    if (key == NULL || info == NULL || input == NULL || output == NULL || olen == NULL) {
         return MBEDTLS_ERR_ECIES_BAD_INPUT_DATA;
     }
 
     // Init structures.
     *olen = 0;
     mbedtls_cipher_init(&cipher_ctx);
-    mbedtls_mpi_init(&shared_key);
     cipher_enc_header = (unsigned char *)input;
+
+    ephemeral_key = info->key_alloc_func();
+    if (ephemeral_key == NULL) {
+        INVOKE_AND_CHECK(result, MBEDTLS_ERR_ECIES_ALLOC_FAILED)
+    }
+
+    // Read envelope.
     INVOKE_AND_CHECK(result,
         mbedtls_ecies_read_envelope(&cipher_enc_header, input + ilen,
                 &cipher_enc_header_len)
@@ -312,7 +322,7 @@ int mbedtls_ecies_decrypt(mbedtls_ecp_keypair *key, const unsigned char *input, 
         goto exit;
     }
     INVOKE_AND_CHECK(result,
-        mbedtls_ecies_read_originator(&cipher_enc_header, input + ilen, &ephemeral_key)
+        info->key_read_pub_asn1_func(&cipher_enc_header, input + ilen, ephemeral_key)
     );
     INVOKE_AND_CHECK(result,
         mbedtls_ecies_read_kdf(&cipher_enc_header, input + ilen, &kdf_type, &md_type)
@@ -346,21 +356,18 @@ int mbedtls_ecies_decrypt(mbedtls_ecp_keypair *key, const unsigned char *input, 
     }
 
     // 1. Compute shared secret key.
-    INVOKE_AND_CHECK(result,
-        ecies_ka(ephemeral_key, key, &shared_key, f_rng, p_rng)
-    );
-    shared_key_binary_len = ECIES_SIZE_TO_OCTETS(key->grp.pbits);
-    shared_key_binary = mbedtls_calloc(1, shared_key_binary_len);
-    if (shared_key_binary == NULL) {
+    shared_key_len = info->key_get_shared_len_func(key);
+    shared_key = mbedtls_calloc(1, shared_key_len);
+    if (shared_key == NULL) {
         INVOKE_AND_CHECK(result, MBEDTLS_ERR_ECIES_ALLOC_FAILED)
     }
     INVOKE_AND_CHECK(result,
-        mbedtls_mpi_write_binary(&shared_key, shared_key_binary, shared_key_binary_len)
+        info->key_compute_shared_func(ephemeral_key, key, shared_key, shared_key_len, f_rng, p_rng)
     );
     // 2. Derive keys (encryption key and hmac key).
     INVOKE_AND_CHECK(result,
         mbedtls_kdf(mbedtls_kdf_info_from_type(kdf_type), mbedtls_md_info_from_type(md_type),
-                shared_key_binary, shared_key_binary_len, kdf_value, kdf_len)
+                shared_key, shared_key_len, kdf_value, kdf_len)
     );
     // 3. Get HMAC for encrypted message and compare it.
     INVOKE_AND_CHECK(result,
@@ -392,10 +399,9 @@ int mbedtls_ecies_decrypt(mbedtls_ecp_keypair *key, const unsigned char *input, 
     );
 exit:
     mbedtls_cipher_free(&cipher_ctx);
-    mbedtls_ecp_keypair_free(ephemeral_key);
-    mbedtls_mpi_free(&shared_key);
-    if (shared_key_binary != NULL) {
-        mbedtls_free(shared_key_binary);
+    info->key_free_func(ephemeral_key);
+    if (shared_key != NULL) {
+        mbedtls_free(shared_key);
     }
     if (kdf_value != NULL) {
         mbedtls_free(kdf_value);

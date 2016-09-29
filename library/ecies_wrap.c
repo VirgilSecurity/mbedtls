@@ -229,11 +229,12 @@ static int ecp_key_read_pub_asn1_wrap( unsigned char** p, const unsigned char* e
 
     mbedtls_ecp_keypair* ecp_key = (mbedtls_ecp_keypair *) key;
 
+    mbedtls_pk_init(&pk);
+
     INVOKE_AND_CHECK(result,
         asn1_get_tag_len(*p, end, &key_len)
     );
 
-    mbedtls_pk_init(&pk);
     INVOKE_AND_CHECK(result,
         mbedtls_pk_parse_public_key(&pk, *p, key_len)
     );
@@ -366,11 +367,12 @@ static int fast_ec_key_read_pub_asn1_wrap( unsigned char** p, const unsigned cha
 
     mbedtls_fast_ec_keypair_t* fast_ec_key = (mbedtls_fast_ec_keypair_t *) key;
 
+    mbedtls_pk_init(&pk);
+
     INVOKE_AND_CHECK(result,
         asn1_get_tag_len(*p, end, &key_len)
     );
 
-    mbedtls_pk_init(&pk);
     INVOKE_AND_CHECK(result,
         mbedtls_pk_parse_public_key(&pk, *p, key_len)
     );

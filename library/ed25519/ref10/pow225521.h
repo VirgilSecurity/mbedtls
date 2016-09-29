@@ -70,7 +70,7 @@ fe_mul(t0,t0,t1);
 /* qhasm: z22 = z11^2^1 */
 /* asm 1: fe_sq(>z22=fe#3,<z11=fe#1); for (i = 1;i < 1;++i) fe_sq(>z22=fe#3,>z22=fe#3); */
 /* asm 2: fe_sq(>z22=t2,<z11=t0); for (i = 1;i < 1;++i) fe_sq(>z22=t2,>z22=t2); */
-fe_sq(t2,t0); for (i = 1;i < 1;++i) fe_sq(t2,t2);
+fe_sq(t2,t0); /* for (i = 1;i < 1;++i) fe_sq(t2,t2); */
 
 /* qhasm: z_5_0 = z9*z22 */
 /* asm 1: fe_mul(>z_5_0=fe#2,<z9=fe#2,<z22=fe#3); */

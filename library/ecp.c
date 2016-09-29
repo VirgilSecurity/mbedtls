@@ -2018,7 +2018,7 @@ int mbedtls_ecp_check_pub_priv( const mbedtls_ecp_keypair *pub, const mbedtls_ec
     mbedtls_ecp_group_init( &grp );
 
     /* mbedtls_ecp_mul() needs a non-const group... */
-    mbedtls_ecp_group_copy( &grp, &prv->grp );
+    MBEDTLS_MPI_CHK( mbedtls_ecp_group_copy( &grp, &prv->grp ) );
 
     /* Also checks d is valid */
     MBEDTLS_MPI_CHK( mbedtls_ecp_mul( &grp, &Q, &prv->d, &prv->grp.G, NULL, NULL ) );

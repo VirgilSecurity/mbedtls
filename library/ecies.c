@@ -180,7 +180,7 @@ int mbedtls_ecies_encrypt(void *key, const mbedtls_ecies_info_t* info,
     );
     INVOKE_AND_CHECK(result,
         mbedtls_cipher_setkey(&cipher_ctx, cipher_key,
-                cipher_key_len * ECIES_OCTET_SIZE, MBEDTLS_ENCRYPT)
+                (int)(cipher_key_len * ECIES_OCTET_SIZE), MBEDTLS_ENCRYPT)
     );
     INVOKE_AND_CHECK(result,
         mbedtls_cipher_set_padding_mode(&cipher_ctx, MBEDTLS_ECIES_CIPHER_PADDING)
@@ -381,7 +381,7 @@ int mbedtls_ecies_decrypt(void *key, const mbedtls_ecies_info_t* info,
     // 4. Decrypt given message.
     INVOKE_AND_CHECK(result,
         mbedtls_cipher_setkey(&cipher_ctx, cipher_key,
-                cipher_key_len * ECIES_OCTET_SIZE, MBEDTLS_DECRYPT)
+                (int)(cipher_key_len * ECIES_OCTET_SIZE), MBEDTLS_DECRYPT)
     );
     INVOKE_AND_CHECK(result,
         mbedtls_cipher_set_padding_mode(&cipher_ctx, MBEDTLS_ECIES_CIPHER_PADDING)

@@ -1,5 +1,11 @@
 Virgil Security ChangeLog (Sorted per version, date)
 
+= Virgil Security 2.0.3 released 2016-03-22
+
+Bugfix
+  * Fix MSVC warnings
+
+
 = Virgil Security 2.0.2 released 2016-03-22
 
 Bugfix

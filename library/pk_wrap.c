@@ -30,6 +30,7 @@
 
 /* Even if RSA not activated, for the sake of RSA-alt */
 #include "mbedtls/rsa.h"
+#include "mbedtls/bignum.h"
 
 #include <string.h>
 
@@ -58,6 +59,8 @@
 #define mbedtls_free       free
 #endif
 
+#include <limits.h>
+
 #if defined(MBEDTLS_PK_RSA_ALT_SUPPORT)
 /* Implementation that should never be optimized out by the compiler */
 static void mbedtls_zeroize( void *v, size_t n ) {
@@ -83,6 +86,11 @@ static int rsa_verify_wrap( void *ctx, mbedtls_md_type_t md_alg,
 {
     int ret;
 
+#if defined(MBEDTLS_HAVE_INT64)
+    if( md_alg == MBEDTLS_MD_NONE && UINT_MAX < hash_len )
+        return( MBEDTLS_ERR_PK_BAD_INPUT_DATA );
+#endif /* MBEDTLS_HAVE_INT64 */
+
     if( sig_len < ((mbedtls_rsa_context *) ctx)->len )
         return( MBEDTLS_ERR_RSA_VERIFY_FAILED );
 
@@ -102,6 +110,11 @@ static int rsa_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
                    unsigned char *sig, size_t *sig_len,
                    int (*f_rng)(void *, unsigned char *, size_t), void *p_rng )
 {
+#if defined(MBEDTLS_HAVE_INT64)
+    if( md_alg == MBEDTLS_MD_NONE && UINT_MAX < hash_len )
+        return( MBEDTLS_ERR_PK_BAD_INPUT_DATA );
+#endif /* MBEDTLS_HAVE_INT64 */
+
     *sig_len = ((mbedtls_rsa_context *) ctx)->len;
 
     return( mbedtls_rsa_pkcs1_sign( (mbedtls_rsa_context *) ctx, f_rng, p_rng, MBEDTLS_RSA_PRIVATE,
@@ -447,6 +460,11 @@ static int rsa_alt_sign_wrap( void *ctx, mbedtls_md_type_t md_alg,
                    int (*f_rng)(void *, unsigned char *, size_t), void *p_rng )
 {
     mbedtls_rsa_alt_context *rsa_alt = (mbedtls_rsa_alt_context *) ctx;
+
+#if defined(MBEDTLS_HAVE_INT64)
+    if( UINT_MAX < hash_len )
+        return( MBEDTLS_ERR_PK_BAD_INPUT_DATA );
+#endif /* MBEDTLS_HAVE_INT64 */
 
     *sig_len = rsa_alt->key_len_func( rsa_alt->key );
 

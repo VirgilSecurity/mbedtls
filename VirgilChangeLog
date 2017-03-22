@@ -1,5 +1,12 @@
 Virgil Security ChangeLog (Sorted per version, date)
 
+= Virgil Security 2.0.2 released 2016-03-22
+
+Bugfix
+  * Update to mbed TLS version 2.4.2
+  * Return error MBEDTLS_ERR_PK_PASSWORD_REQUIRED if private key is really encrypted
+
+
 = Virgil Security 2.0.1 released 2016-12-07
 
 Changes

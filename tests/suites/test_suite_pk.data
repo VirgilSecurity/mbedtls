@@ -138,6 +138,10 @@ Check pair #5 (RSA vs EC)
 depends_on:MBEDTLS_ECP_C:MBEDTLS_ECP_DP_SECP256R1_ENABLED:MBEDTLS_RSA_C
 mbedtls_pk_check_pair:"data_files/ec_256_pub.pem":"data_files/server1.key":MBEDTLS_ERR_PK_TYPE_MISMATCH
 
+RSA hash_len overflow (size_t vs unsigned int)
+depends_on:MBEDTLS_RSA_C:MBEDTLS_HAVE_INT64
+pk_rsa_overflow:
+
 ECIES Encrypt/Decrypt (EC, OK)
 depends_on:MBEDTLS_ECIES_C:MBEDTLS_ECP_DP_SECP192R1_ENABLED
 pk_encrypt_decrypt:MBEDTLS_PK_ECKEY:"Test vector":512:16:0

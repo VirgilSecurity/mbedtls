@@ -1056,10 +1056,6 @@ static int pk_parse_key_pkcs8_encrypted_der(
     if( ( ret = mbedtls_asn1_get_tag( &p, end, &len, MBEDTLS_ASN1_OCTET_STRING ) ) != 0 )
         return( MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret );
 
-    buf = mbedtls_calloc(1, len);
-    if( buf == NULL )
-        return( MBEDTLS_ERR_PK_ALLOC_FAILED );
-
     /*
      * At this point we know that EncryptedPrivatKeyInfo structure is valid,
      *     so we need password for decryption.
@@ -1070,6 +1066,10 @@ static int pk_parse_key_pkcs8_encrypted_der(
     /*
      * Decrypt EncryptedData with appropriate PDE
      */
+    buf = mbedtls_calloc( 1, len );
+    if( buf == NULL )
+        return( MBEDTLS_ERR_PK_ALLOC_FAILED );
+
 #if defined(MBEDTLS_PKCS12_C)
     if( mbedtls_oid_get_pkcs12_pbe_alg( &pbe_alg_oid, &md_alg, &cipher_alg ) == 0 )
     {

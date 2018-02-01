@@ -154,6 +154,7 @@ static void * ecp_key_alloc_wrap( void )
 static void ecp_key_free_wrap( void *key )
 {
     mbedtls_ecp_keypair_free( (mbedtls_ecp_keypair *) key );
+    mbedtls_free( key );
 }
 
 static int ecp_key_gen_ephemeral_wrap( void *src_key, void *dst_key,
@@ -291,6 +292,7 @@ static void * fast_ec_key_alloc_wrap( void )
 static void fast_ec_key_free_wrap( void *key )
 {
     mbedtls_fast_ec_free( (mbedtls_fast_ec_keypair_t *) key );
+    mbedtls_free( key );
 }
 
 static int fast_ec_key_gen_ephemeral_wrap( void *src_key, void *dst_key,

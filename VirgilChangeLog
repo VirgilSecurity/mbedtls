@@ -1,5 +1,12 @@
 Virgil Security ChangeLog (Sorted per version, date)
 
+= Virgil Security 2.0.4 released 2018-02-01
+
+Bugfix
+  * Fix memory leaks in the ECIES algorithm
+  * Fix memory leaks when parse PKCS#8 encrypted key without password
+
+
 = Virgil Security 2.0.3 released 2016-03-22
 
 Bugfix

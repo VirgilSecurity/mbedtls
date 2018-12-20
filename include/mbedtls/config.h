@@ -414,11 +414,11 @@
  *      unsigned char mbedtls_internal_ecp_grp_capable(
  *          const mbedtls_ecp_group *grp )
  *      int  mbedtls_internal_ecp_init( const mbedtls_ecp_group *grp )
- *      void mbedtls_internal_ecp_deinit( const mbedtls_ecp_group *grp )
+ *      void mbedtls_internal_ecp_free( const mbedtls_ecp_group *grp )
  * The mbedtls_internal_ecp_grp_capable function should return 1 if the
  * replacement functions implement arithmetic for the given group and 0
  * otherwise.
- * The functions mbedtls_internal_ecp_init and mbedtls_internal_ecp_deinit are
+ * The functions mbedtls_internal_ecp_init and mbedtls_internal_ecp_free are
  * called before and after each point operation and provide an opportunity to
  * implement optimized set up and tear down instructions.
  *
@@ -1581,6 +1581,17 @@
  * Uncomment this to enable pthread mutexes.
  */
 //#define MBEDTLS_THREADING_PTHREAD
+
+/**
+ * \def MBEDTLS_THREADING_SRWLOCK
+ *
+ * Enable the Windows SRW Locks wrapper layer for the threading layer.
+ *
+ * Requires: MBEDTLS_THREADING_C
+ *
+ * Uncomment this to enable SRW Lock mutexes.
+ */
+//#define MBEDTLS_THREADING_SRWLOCK
 
 /**
  * \def MBEDTLS_VERSION_FEATURES
@@ -2768,7 +2779,7 @@
  * provided).
  *
  * You will have to enable either MBEDTLS_THREADING_ALT or
- * MBEDTLS_THREADING_PTHREAD.
+ * MBEDTLS_THREADING_PTHREAD or MBEDTLS_THREADING_SRWLOCK
  *
  * Enable this layer to allow use of mutexes within mbed TLS
  */

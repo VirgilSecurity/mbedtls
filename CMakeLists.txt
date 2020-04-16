@@ -88,7 +88,7 @@ set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE}
 function(link_to_source base_name)
     # Get OS dependent path to use in `execute_process`
     # with respect to the CMake bug: https://gitlab.kitware.com/cmake/cmake/issues/5939
-    if(MINGW)
+    if(MINGW AND CMAKE_HOST_WIN32)
         string(REPLACE "/" "\\" link "${CMAKE_CURRENT_BINARY_DIR}/${base_name}")
         string(REPLACE "/" "\\" target "${CMAKE_CURRENT_SOURCE_DIR}/${base_name}")
     else()

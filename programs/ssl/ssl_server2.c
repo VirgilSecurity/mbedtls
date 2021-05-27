@@ -102,7 +102,6 @@ int main( void )
 #define DFL_EXCHANGES           1
 #define DFL_MIN_VERSION         -1
 #define DFL_MAX_VERSION         -1
-#define DFL_ARC4                -1
 #define DFL_SHA1                -1
 #define DFL_CID_ENABLED         0
 #define DFL_CID_VALUE           ""
@@ -364,12 +363,8 @@ int main( void )
 #define USAGE_ANTI_REPLAY ""
 #endif
 
-#if defined(MBEDTLS_SSL_DTLS_BADMAC_LIMIT)
 #define USAGE_BADMAC_LIMIT \
     "    badmac_limit=%%d     default: (library default: disabled)\n"
-#else
-#define USAGE_BADMAC_LIMIT ""
-#endif
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 #define USAGE_DTLS \
@@ -452,7 +447,7 @@ int main( void )
     "    server_port=%%d      default: 4433\n"              \
     "    debug_level=%%d      default: 0 (disabled)\n"      \
     "    buffer_size=%%d      default: 200 \n" \
-    "                         (minimum: 1, max: 16385)\n" \
+    "                         (minimum: 1)\n" \
     "    response_size=%%d    default: about 152 (basic response)\n" \
     "                          (minimum: 0, max: 16384)\n" \
     "                          increases buffer_size if bigger\n"\
@@ -500,15 +495,14 @@ int main( void )
 #define USAGE4 \
     USAGE_SSL_ASYNC                                         \
     USAGE_SNI                                               \
-    "    arc4=%%d             default: (library default: 0)\n" \
     "    allow_sha1=%%d       default: 0\n"                             \
-    "    min_version=%%s      default: (library default: tls1)\n"       \
+    "    min_version=%%s      default: (library default: tls1_2)\n"       \
     "    max_version=%%s      default: (library default: tls1_2)\n"     \
     "    force_version=%%s    default: \"\" (none)\n"       \
-    "                        options: ssl3, tls1, tls1_1, tls1_2, dtls1, dtls1_2\n" \
+    "                        options: tls1_2, dtls1_2\n" \
     "\n"                                                                \
-    "    version_suites=a,b,c,d      per-version ciphersuites\n"        \
-    "                                in order from ssl3 to tls1_2\n"    \
+    "    version_suites=a,b,c        per-version ciphersuites\n"        \
+    "                                in order from tls1 to tls1_2\n"    \
     "                                default: all enabled\n"            \
     "    force_ciphersuite=<name>    default: all enabled\n"            \
     "    query_config=<name>         return 0 if the specified\n"       \
@@ -580,7 +574,6 @@ struct options
     int exchanges;              /* number of data exchanges                 */
     int min_version;            /* minimum protocol version accepted        */
     int max_version;            /* maximum protocol version accepted        */
-    int arc4;                   /* flag for arc4 suites support             */
     int allow_sha1;             /* flag for SHA-1 support                   */
     int auth_mode;              /* verify mode for connection               */
     int cert_req_ca_list;       /* should we send the CA list?              */
@@ -1260,7 +1253,7 @@ int main( int argc, char *argv[] )
 {
     int ret = 0, len, written, frags, exchanges_left;
     int query_config_ret = 0;
-    int version_suites[4][2];
+    int version_suites[3][2];
     io_ctx_t io_ctx;
     unsigned char* buf = 0;
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
@@ -1497,7 +1490,6 @@ int main( int argc, char *argv[] )
     opt.exchanges           = DFL_EXCHANGES;
     opt.min_version         = DFL_MIN_VERSION;
     opt.max_version         = DFL_MAX_VERSION;
-    opt.arc4                = DFL_ARC4;
     opt.allow_sha1          = DFL_SHA1;
     opt.auth_mode           = DFL_AUTH_MODE;
     opt.cert_req_ca_list    = DFL_CERT_REQ_CA_LIST;
@@ -1576,13 +1568,13 @@ int main( int argc, char *argv[] )
         else if( strcmp( p, "buffer_size" ) == 0 )
         {
             opt.buffer_size = atoi( q );
-            if( opt.buffer_size < 1 || opt.buffer_size > MBEDTLS_SSL_MAX_CONTENT_LEN + 1 )
+            if( opt.buffer_size < 1 )
                 goto usage;
         }
         else if( strcmp( p, "response_size" ) == 0 )
         {
             opt.response_size = atoi( q );
-            if( opt.response_size < 0 || opt.response_size > MBEDTLS_SSL_MAX_CONTENT_LEN )
+            if( opt.response_size < 0 || opt.response_size > MBEDTLS_SSL_OUT_CONTENT_LEN )
                 goto usage;
             if( opt.buffer_size < opt.response_size )
                 opt.buffer_size = opt.response_size;
@@ -1730,14 +1722,7 @@ int main( int argc, char *argv[] )
         }
         else if( strcmp( p, "min_version" ) == 0 )
         {
-            if( strcmp( q, "ssl3" ) == 0 )
-                opt.min_version = MBEDTLS_SSL_MINOR_VERSION_0;
-            else if( strcmp( q, "tls1" ) == 0 )
-                opt.min_version = MBEDTLS_SSL_MINOR_VERSION_1;
-            else if( strcmp( q, "tls1_1" ) == 0 ||
-                     strcmp( q, "dtls1" ) == 0 )
-                opt.min_version = MBEDTLS_SSL_MINOR_VERSION_2;
-            else if( strcmp( q, "tls1_2" ) == 0 ||
+            if( strcmp( q, "tls1_2" ) == 0 ||
                      strcmp( q, "dtls1_2" ) == 0 )
                 opt.min_version = MBEDTLS_SSL_MINOR_VERSION_3;
             else
@@ -1745,27 +1730,11 @@ int main( int argc, char *argv[] )
         }
         else if( strcmp( p, "max_version" ) == 0 )
         {
-            if( strcmp( q, "ssl3" ) == 0 )
-                opt.max_version = MBEDTLS_SSL_MINOR_VERSION_0;
-            else if( strcmp( q, "tls1" ) == 0 )
-                opt.max_version = MBEDTLS_SSL_MINOR_VERSION_1;
-            else if( strcmp( q, "tls1_1" ) == 0 ||
-                     strcmp( q, "dtls1" ) == 0 )
-                opt.max_version = MBEDTLS_SSL_MINOR_VERSION_2;
-            else if( strcmp( q, "tls1_2" ) == 0 ||
+            if( strcmp( q, "tls1_2" ) == 0 ||
                      strcmp( q, "dtls1_2" ) == 0 )
                 opt.max_version = MBEDTLS_SSL_MINOR_VERSION_3;
             else
                 goto usage;
-        }
-        else if( strcmp( p, "arc4" ) == 0 )
-        {
-            switch( atoi( q ) )
-            {
-                case 0:     opt.arc4 = MBEDTLS_SSL_ARC4_DISABLED;   break;
-                case 1:     opt.arc4 = MBEDTLS_SSL_ARC4_ENABLED;    break;
-                default:    goto usage;
-            }
         }
         else if( strcmp( p, "allow_sha1" ) == 0 )
         {
@@ -1778,31 +1747,10 @@ int main( int argc, char *argv[] )
         }
         else if( strcmp( p, "force_version" ) == 0 )
         {
-            if( strcmp( q, "ssl3" ) == 0 )
-            {
-                opt.min_version = MBEDTLS_SSL_MINOR_VERSION_0;
-                opt.max_version = MBEDTLS_SSL_MINOR_VERSION_0;
-            }
-            else if( strcmp( q, "tls1" ) == 0 )
-            {
-                opt.min_version = MBEDTLS_SSL_MINOR_VERSION_1;
-                opt.max_version = MBEDTLS_SSL_MINOR_VERSION_1;
-            }
-            else if( strcmp( q, "tls1_1" ) == 0 )
-            {
-                opt.min_version = MBEDTLS_SSL_MINOR_VERSION_2;
-                opt.max_version = MBEDTLS_SSL_MINOR_VERSION_2;
-            }
-            else if( strcmp( q, "tls1_2" ) == 0 )
+            if( strcmp( q, "tls1_2" ) == 0 )
             {
                 opt.min_version = MBEDTLS_SSL_MINOR_VERSION_3;
                 opt.max_version = MBEDTLS_SSL_MINOR_VERSION_3;
-            }
-            else if( strcmp( q, "dtls1" ) == 0 )
-            {
-                opt.min_version = MBEDTLS_SSL_MINOR_VERSION_2;
-                opt.max_version = MBEDTLS_SSL_MINOR_VERSION_2;
-                opt.transport = MBEDTLS_SSL_TRANSPORT_DATAGRAM;
             }
             else if( strcmp( q, "dtls1_2" ) == 0 )
             {
@@ -2094,19 +2042,6 @@ int main( int argc, char *argv[] )
                 opt.min_version = MBEDTLS_SSL_MINOR_VERSION_2;
         }
 
-        /* Enable RC4 if needed and not explicitly disabled */
-        if( ciphersuite_info->cipher == MBEDTLS_CIPHER_ARC4_128 )
-        {
-            if( opt.arc4 == MBEDTLS_SSL_ARC4_DISABLED )
-            {
-                mbedtls_printf("forced RC4 ciphersuite with RC4 disabled\n");
-                ret = 2;
-                goto usage;
-            }
-
-            opt.arc4 = MBEDTLS_SSL_ARC4_ENABLED;
-        }
-
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
         if( opt.psk_opaque != 0 || opt.psk_list_opaque != 0 )
         {
@@ -2122,11 +2057,11 @@ int main( int argc, char *argv[] )
             }
 
             /* Determine KDF algorithm the opaque PSK will be used in. */
-#if defined(MBEDTLS_SHA512_C)
+#if defined(MBEDTLS_SHA384_C)
             if( ciphersuite_info->mac == MBEDTLS_MD_SHA384 )
                 alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_384);
             else
-#endif /* MBEDTLS_SHA512_C */
+#endif /* MBEDTLS_SHA384_C */
                 alg = PSA_ALG_TLS12_PSK_TO_MS(PSA_ALG_SHA_256);
         }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
@@ -2134,11 +2069,11 @@ int main( int argc, char *argv[] )
 
     if( opt.version_suites != NULL )
     {
-        const char *name[4] = { 0 };
+        const char *name[3] = { 0 };
 
         /* Parse 4-element coma-separated list */
         for( i = 0, p = (char *) opt.version_suites;
-             i < 4 && *p != '\0';
+             i < 3 && *p != '\0';
              i++ )
         {
             name[i] = p;
@@ -2150,7 +2085,7 @@ int main( int argc, char *argv[] )
                 *p++ = '\0';
         }
 
-        if( i != 4 )
+        if( i != 3 )
         {
             mbedtls_printf( "too few values for version_suites\n" );
             ret = 1;
@@ -2160,7 +2095,7 @@ int main( int argc, char *argv[] )
         memset( version_suites, 0, sizeof( version_suites ) );
 
         /* Get the suites identifiers from their name */
-        for( i = 0; i < 4; i++ )
+        for( i = 0; i < 3; i++ )
         {
             version_suites[i][0] = mbedtls_ssl_get_ciphersuite_id( name[i] );
 
@@ -2324,7 +2259,6 @@ int main( int argc, char *argv[] )
         ret = mbedtls_x509_crt_parse_file( &cacert, opt.ca_file );
     else
 #endif
-#if defined(MBEDTLS_CERTS_C)
     {
 #if defined(MBEDTLS_PEM_PARSE_C)
         for( i = 0; mbedtls_test_cas[i] != NULL; i++ )
@@ -2346,12 +2280,6 @@ int main( int argc, char *argv[] )
                 break;
         }
     }
-#else
-    {
-        ret = 1;
-        mbedtls_printf( "MBEDTLS_CERTS_C not defined." );
-    }
-#endif /* MBEDTLS_CERTS_C */
     if( ret < 0 )
     {
         mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse returned -0x%x\n\n", (unsigned int) -ret );
@@ -2427,10 +2355,6 @@ int main( int argc, char *argv[] )
         strcmp( opt.crt_file2, "none" ) != 0 &&
         strcmp( opt.key_file2, "none" ) != 0 )
     {
-#if !defined(MBEDTLS_CERTS_C)
-        mbedtls_printf( "Not certificated or key provided, and \nMBEDTLS_CERTS_C not defined!\n" );
-        goto exit;
-#else
 #if defined(MBEDTLS_RSA_C)
         if( ( ret = mbedtls_x509_crt_parse( &srvcert,
                                     (const unsigned char *) mbedtls_test_srv_crt_rsa,
@@ -2469,7 +2393,6 @@ int main( int argc, char *argv[] )
         }
         key_cert_init2 = 2;
 #endif /* MBEDTLS_ECDSA_C */
-#endif /* MBEDTLS_CERTS_C */
     }
 
     mbedtls_printf( " ok\n" );
@@ -2758,33 +2681,23 @@ int main( int argc, char *argv[] )
             mbedtls_ssl_conf_dtls_anti_replay( &conf, opt.anti_replay );
 #endif
 
-#if defined(MBEDTLS_SSL_DTLS_BADMAC_LIMIT)
         if( opt.badmac_limit != DFL_BADMAC_LIMIT )
             mbedtls_ssl_conf_dtls_badmac_limit( &conf, opt.badmac_limit );
-#endif
     }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
     if( opt.force_ciphersuite[0] != DFL_FORCE_CIPHER )
         mbedtls_ssl_conf_ciphersuites( &conf, opt.force_ciphersuite );
 
-#if defined(MBEDTLS_ARC4_C)
-    if( opt.arc4 != DFL_ARC4 )
-        mbedtls_ssl_conf_arc4_support( &conf, opt.arc4 );
-#endif
-
     if( opt.version_suites != NULL )
     {
         mbedtls_ssl_conf_ciphersuites_for_version( &conf, version_suites[0],
                                           MBEDTLS_SSL_MAJOR_VERSION_3,
-                                          MBEDTLS_SSL_MINOR_VERSION_0 );
+                                          MBEDTLS_SSL_MINOR_VERSION_1 );
         mbedtls_ssl_conf_ciphersuites_for_version( &conf, version_suites[1],
                                           MBEDTLS_SSL_MAJOR_VERSION_3,
-                                          MBEDTLS_SSL_MINOR_VERSION_1 );
-        mbedtls_ssl_conf_ciphersuites_for_version( &conf, version_suites[2],
-                                          MBEDTLS_SSL_MAJOR_VERSION_3,
                                           MBEDTLS_SSL_MINOR_VERSION_2 );
-        mbedtls_ssl_conf_ciphersuites_for_version( &conf, version_suites[3],
+        mbedtls_ssl_conf_ciphersuites_for_version( &conf, version_suites[2],
                                           MBEDTLS_SSL_MAJOR_VERSION_3,
                                           MBEDTLS_SSL_MINOR_VERSION_3 );
     }
@@ -3195,7 +3108,7 @@ handshake:
             char vrfy_buf[512];
             flags = mbedtls_ssl_get_verify_result( &ssl );
 
-            mbedtls_x509_crt_verify_info( vrfy_buf, sizeof( vrfy_buf ), "  ! ", flags );
+            x509_crt_verify_info( vrfy_buf, sizeof( vrfy_buf ), "  ! ", flags );
 
             mbedtls_printf( "%s\n", vrfy_buf );
         }
@@ -3217,7 +3130,7 @@ handshake:
     if( ( ret = mbedtls_ssl_get_record_expansion( &ssl ) ) >= 0 )
         mbedtls_printf( "    [ Record expansion is %d ]\n", ret );
     else
-        mbedtls_printf( "    [ Record expansion is unknown (compression) ]\n" );
+        mbedtls_printf( "    [ Record expansion is unknown ]\n" );
 
 #if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
     mbedtls_printf( "    [ Maximum input fragment length is %u ]\n",
@@ -3247,13 +3160,13 @@ handshake:
 
         mbedtls_printf( " failed\n" );
 
-        mbedtls_x509_crt_verify_info( vrfy_buf, sizeof( vrfy_buf ), "  ! ", flags );
-
+        x509_crt_verify_info( vrfy_buf, sizeof( vrfy_buf ), "  ! ", flags );
         mbedtls_printf( "%s\n", vrfy_buf );
     }
     else
         mbedtls_printf( " ok\n" );
 
+#if !defined(MBEDTLS_X509_REMOVE_INFO)
     if( mbedtls_ssl_get_peer_cert( &ssl ) != NULL )
     {
         char crt_buf[512];
@@ -3263,6 +3176,7 @@ handshake:
                        mbedtls_ssl_get_peer_cert( &ssl ) );
         mbedtls_printf( "%s\n", crt_buf );
     }
+#endif /* MBEDTLS_X509_REMOVE_INFO */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)

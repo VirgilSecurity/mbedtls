@@ -39,7 +39,6 @@
 /* mbed TLS feature support */
 #define MBEDTLS_CIPHER_MODE_CBC
 #define MBEDTLS_CIPHER_PADDING_PKCS7
-#define MBEDTLS_REMOVE_ARC4_CIPHERSUITES
 #define MBEDTLS_ECP_DP_SECP256R1_ENABLED
 #define MBEDTLS_ECP_DP_SECP384R1_ENABLED
 #define MBEDTLS_ECP_DP_CURVE25519_ENABLED
@@ -74,7 +73,12 @@
 #define MBEDTLS_PK_WRITE_C
 #define MBEDTLS_PLATFORM_C
 #define MBEDTLS_RSA_C
+/* The library does not currently support enabling SHA-224 without SHA-256.
+ * A future version of the library will have this option disabled
+ * by default. */
+#define MBEDTLS_SHA224_C
 #define MBEDTLS_SHA256_C
+#define MBEDTLS_SHA384_C
 #define MBEDTLS_SHA512_C
 #define MBEDTLS_VERSION_C
 #define MBEDTLS_X509_USE_C

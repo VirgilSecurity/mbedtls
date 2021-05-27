@@ -1,7 +1,7 @@
 #include "mbedtls/ssl.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
-#include "mbedtls/certs.h"
+#include "test/certs.h"
 #include "common.h"
 #include <string.h>
 #include <stdlib.h>
@@ -108,9 +108,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 #endif
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC)
     mbedtls_ssl_conf_encrypt_then_mac( &conf, (options & 0x20) ? MBEDTLS_SSL_ETM_DISABLED : MBEDTLS_SSL_ETM_ENABLED);
-#endif
-#if defined(MBEDTLS_SSL_CBC_RECORD_SPLITTING)
-    mbedtls_ssl_conf_cbc_record_splitting( &conf, (options & 0x40) ? MBEDTLS_SSL_CBC_RECORD_SPLITTING_ENABLED : MBEDTLS_SSL_CBC_RECORD_SPLITTING_DISABLED );
 #endif
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
     mbedtls_ssl_conf_renegotiation( &conf, (options & 0x80) ? MBEDTLS_SSL_RENEGOTIATION_ENABLED : MBEDTLS_SSL_RENEGOTIATION_DISABLED );

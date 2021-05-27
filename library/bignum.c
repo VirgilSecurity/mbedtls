@@ -38,7 +38,7 @@
 #if defined(MBEDTLS_BIGNUM_C)
 
 #include "mbedtls/bignum.h"
-#include "mbedtls/bn_mul.h"
+#include "bn_mul.h"
 #include "mbedtls/platform_util.h"
 #include "mbedtls/error.h"
 
@@ -470,6 +470,7 @@ int mbedtls_mpi_read_string( mbedtls_mpi *X, int radix, const char *s )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
     size_t i, j, slen, n;
+    int sign = 1;
     mbedtls_mpi_uint d;
     mbedtls_mpi T;
     MPI_VALIDATE_RET( X != NULL );
@@ -479,6 +480,12 @@ int mbedtls_mpi_read_string( mbedtls_mpi *X, int radix, const char *s )
         return( MBEDTLS_ERR_MPI_BAD_INPUT_DATA );
 
     mbedtls_mpi_init( &T );
+
+    if( s[0] == '-' )
+    {
+        ++s;
+        sign = -1;
+    }
 
     slen = strlen( s );
 
@@ -494,12 +501,6 @@ int mbedtls_mpi_read_string( mbedtls_mpi *X, int radix, const char *s )
 
         for( i = slen, j = 0; i > 0; i--, j++ )
         {
-            if( i == 1 && s[i - 1] == '-' )
-            {
-                X->s = -1;
-                break;
-            }
-
             MBEDTLS_MPI_CHK( mpi_get_digit( &d, radix, s[i - 1] ) );
             X->p[j / ( 2 * ciL )] |= d << ( ( j % ( 2 * ciL ) ) << 2 );
         }
@@ -510,25 +511,14 @@ int mbedtls_mpi_read_string( mbedtls_mpi *X, int radix, const char *s )
 
         for( i = 0; i < slen; i++ )
         {
-            if( i == 0 && s[i] == '-' )
-            {
-                X->s = -1;
-                continue;
-            }
-
             MBEDTLS_MPI_CHK( mpi_get_digit( &d, radix, s[i] ) );
             MBEDTLS_MPI_CHK( mbedtls_mpi_mul_int( &T, X, radix ) );
-
-            if( X->s == 1 )
-            {
-                MBEDTLS_MPI_CHK( mbedtls_mpi_add_int( X, &T, d ) );
-            }
-            else
-            {
-                MBEDTLS_MPI_CHK( mbedtls_mpi_sub_int( X, &T, d ) );
-            }
+            MBEDTLS_MPI_CHK( mbedtls_mpi_add_int( X, &T, d ) );
         }
     }
+
+    if( sign < 0 && mbedtls_mpi_bitlen( X ) != 0 )
+        X->s = -1;
 
 cleanup:
 
@@ -1676,8 +1666,7 @@ int mbedtls_mpi_mul_int( mbedtls_mpi *X, const mbedtls_mpi *A, mbedtls_mpi_uint 
      * calculating the result is trivial in those cases. */
     if( b == 0 || n == 0 )
     {
-        mbedtls_mpi_lset( X, 0 );
-        return( 0 );
+        return( mbedtls_mpi_lset( X, 0 ) );
     }
 
     /* Calculate A*b as A + A*(b-1) to take advantage of mpi_mul_hlp */
@@ -2727,26 +2716,6 @@ int mbedtls_mpi_is_prime_ext( const mbedtls_mpi *X, int rounds,
 
     return( mpi_miller_rabin( &XX, rounds, f_rng, p_rng ) );
 }
-
-#if !defined(MBEDTLS_DEPRECATED_REMOVED)
-/*
- * Pseudo-primality test, error probability 2^-80
- */
-int mbedtls_mpi_is_prime( const mbedtls_mpi *X,
-                  int (*f_rng)(void *, unsigned char *, size_t),
-                  void *p_rng )
-{
-    MPI_VALIDATE_RET( X     != NULL );
-    MPI_VALIDATE_RET( f_rng != NULL );
-
-    /*
-     * In the past our key generation aimed for an error rate of at most
-     * 2^-80. Since this function is deprecated, aim for the same certainty
-     * here as well.
-     */
-    return( mbedtls_mpi_is_prime_ext( X, 40, f_rng, p_rng ) );
-}
-#endif
 
 /*
  * Prime number generation

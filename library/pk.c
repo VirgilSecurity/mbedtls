@@ -21,7 +21,7 @@
 
 #if defined(MBEDTLS_PK_C)
 #include "mbedtls/pk.h"
-#include "mbedtls/pk_internal.h"
+#include "pk_wrap.h"
 
 #include "mbedtls/platform_util.h"
 #include "mbedtls/error.h"
@@ -367,11 +367,10 @@ int mbedtls_pk_verify_ext( mbedtls_pk_type_t type, const void *options,
             return( MBEDTLS_ERR_RSA_VERIFY_FAILED );
 
         ret = mbedtls_rsa_rsassa_pss_verify_ext( mbedtls_pk_rsa( *ctx ),
-                NULL, NULL, MBEDTLS_RSA_PUBLIC,
-                md_alg, (unsigned int) hash_len, hash,
-                pss_opts->mgf1_hash_id,
-                pss_opts->expected_salt_len,
-                sig );
+                                                 md_alg, (unsigned int) hash_len, hash,
+                                                 pss_opts->mgf1_hash_id,
+                                                 pss_opts->expected_salt_len,
+                                                 sig );
         if( ret != 0 )
             return( ret );
 
@@ -626,7 +625,7 @@ int mbedtls_pk_wrap_as_opaque( mbedtls_pk_context *pk,
 
     /* import private key into PSA */
     if( PSA_SUCCESS != psa_import_key( &attributes, d, d_len, key ) )
-        return( MBEDTLS_ERR_PK_HW_ACCEL_FAILED );
+        return( MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED );
 
     /* make PK context wrap the key slot */
     mbedtls_pk_free( pk );

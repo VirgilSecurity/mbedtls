@@ -115,11 +115,7 @@ echo
 echo '################ compat.sh ################'
 {
     echo '#### compat.sh: Default versions'
-    sh compat.sh -m 'tls1 tls1_1 tls1_2 dtls1 dtls1_2'
-    echo
-
-    echo '#### compat.sh: legacy (SSLv3)'
-    OPENSSL_CMD="$OPENSSL_LEGACY" sh compat.sh -m 'ssl3'
+    sh compat.sh -m 'tls1_2 dtls1_2'
     echo
 
     echo '#### compat.sh: legacy (null, DES, RC4)'

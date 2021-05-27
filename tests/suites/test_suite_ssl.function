@@ -1,12 +1,12 @@
 /* BEGIN_HEADER */
 #include <mbedtls/ssl.h>
-#include <mbedtls/ssl_internal.h>
+#include <ssl_misc.h>
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>
-#include <mbedtls/certs.h>
 #include <mbedtls/timing.h>
 #include <mbedtls/debug.h>
 #include <ssl_tls13_keys.h>
+#include "test/certs.h"
 
 #include <ssl_invasive.h>
 
@@ -1254,7 +1254,7 @@ static int build_transforms( mbedtls_ssl_transform *t_in,
                                 keylen << 3, MBEDTLS_DECRYPT ) == 0 );
 
     /* Setup MAC contexts */
-#if defined(MBEDTLS_SSL_SOME_MODES_USE_MAC)
+#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
     if( cipher_info->mode == MBEDTLS_MODE_CBC ||
         cipher_info->mode == MBEDTLS_MODE_STREAM )
     {
@@ -1276,30 +1276,18 @@ static int build_transforms( mbedtls_ssl_transform *t_in,
         CHK( mbedtls_md_setup( &t_in->md_ctx_enc,  md_info, 1 ) == 0 );
         CHK( mbedtls_md_setup( &t_in->md_ctx_dec,  md_info, 1 ) == 0 );
 
-        if( ver > MBEDTLS_SSL_MINOR_VERSION_0 )
-        {
-            CHK( mbedtls_md_hmac_starts( &t_in->md_ctx_enc,
-                                         md0, maclen ) == 0 );
-            CHK( mbedtls_md_hmac_starts( &t_in->md_ctx_dec,
-                                         md1, maclen ) == 0 );
-            CHK( mbedtls_md_hmac_starts( &t_out->md_ctx_enc,
-                                         md1, maclen ) == 0 );
-            CHK( mbedtls_md_hmac_starts( &t_out->md_ctx_dec,
-                                         md0, maclen ) == 0 );
-        }
-#if defined(MBEDTLS_SSL_PROTO_SSL3)
-        else
-        {
-            memcpy( &t_in->mac_enc, md0, maclen );
-            memcpy( &t_in->mac_dec, md1, maclen );
-            memcpy( &t_out->mac_enc, md1, maclen );
-            memcpy( &t_out->mac_dec, md0, maclen );
-        }
-#endif
+        CHK( mbedtls_md_hmac_starts( &t_in->md_ctx_enc,
+                                        md0, maclen ) == 0 );
+        CHK( mbedtls_md_hmac_starts( &t_in->md_ctx_dec,
+                                        md1, maclen ) == 0 );
+        CHK( mbedtls_md_hmac_starts( &t_out->md_ctx_enc,
+                                        md1, maclen ) == 0 );
+        CHK( mbedtls_md_hmac_starts( &t_out->md_ctx_dec,
+                                        md0, maclen ) == 0 );
     }
 #else
     ((void) hash_id);
-#endif /* MBEDTLS_SSL_SOME_MODES_USE_MAC */
+#endif /* MBEDTLS_SSL_SOME_SUITES_USE_MAC */
 
 
     /* Pick IV's (regardless of whether they
@@ -1313,7 +1301,7 @@ static int build_transforms( mbedtls_ssl_transform *t_in,
      */
 
 #if defined(MBEDTLS_SSL_ENCRYPT_THEN_MAC) && \
-    defined(MBEDTLS_SSL_SOME_MODES_USE_MAC)
+    defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
     t_out->encrypt_then_mac = etm;
     t_in->encrypt_then_mac = etm;
 #else
@@ -1877,8 +1865,7 @@ void perform_handshake( handshake_test_options* options )
 #if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
     if( options->resize_buffers != 0 )
     {
-        if( options->expected_negotiated_version != MBEDTLS_SSL_MINOR_VERSION_0 &&
-            options->expected_negotiated_version != MBEDTLS_SSL_MINOR_VERSION_1 )
+        if( options->expected_negotiated_version != MBEDTLS_SSL_MINOR_VERSION_1 )
         {
             /* A server, when using DTLS, might delay a buffer resize to happen
              * after it receives a message, so we force it. */
@@ -2662,7 +2649,7 @@ exit:
 void ssl_message_mock_uninitialized( )
 {
     enum { MSGLEN = 10 };
-    unsigned char message[MSGLEN], received[MSGLEN];
+    unsigned char message[MSGLEN] = {0}, received[MSGLEN];
     mbedtls_mock_socket client, server;
     mbedtls_test_message_queue server_queue, client_queue;
     mbedtls_test_message_socket_context server_context, client_context;
@@ -3477,10 +3464,9 @@ void ssl_decrypt_non_etm_cbc( int cipher_type, int hash_id, int trunc_hmac,
      * Test record decryption for CBC without EtM, focused on the verification
      * of padding and MAC.
      *
-     * Actually depends on TLS >= 1.0 (SSL 3.0 computes the MAC differently),
-     * and either AES, ARIA, Camellia or DES, but since the test framework
-     * doesn't support alternation in dependency statements, just depend on
-     * TLS 1.2 and AES.
+     * Actually depends on TLS >= 1.0 and either AES, ARIA, Camellia or DES,
+     * but since the test framework doesn't support alternation in
+     * dependency statements, just depend on TLS 1.2 and AES.
      *
      * The length_selector argument is interpreted as follows:
      * - if it's -1, the plaintext length is 0 and minimal padding is applied
@@ -4227,10 +4213,9 @@ void handshake_version( int dtls, int client_min_version, int client_max_version
     options.expected_negotiated_version = expected_negotiated_version;
 
     options.dtls = dtls;
-    /* By default, SSLv3.0 and TLSv1.0 use 1/n-1 splitting when sending data, so
+    /* By default, TLSv1.0 use 1/n-1 splitting when sending data, so
      * the number of fragments will be twice as big. */
-    if( expected_negotiated_version == MBEDTLS_SSL_MINOR_VERSION_0 ||
-        expected_negotiated_version == MBEDTLS_SSL_MINOR_VERSION_1 )
+    if( expected_negotiated_version == MBEDTLS_SSL_MINOR_VERSION_1 )
     {
         options.expected_cli_fragments = 2;
         options.expected_srv_fragments = 2;

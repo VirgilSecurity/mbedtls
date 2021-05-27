@@ -10,10 +10,6 @@
 #     directories. That way, a target linking to a library (using the
 #     target_link_librairies command) inherits from the library PUBLIC include
 #     directories and not from the PRIVATE ones.
-#   + Note: there is currently one remaining include_directories command in the
-#     CMake files. It is related to ZLIB support which is planned to be removed.
-#     When the support is removed, the associated include_directories command
-#     will be removed as well as this note.
 # - MBEDTLS_TARGET_PREFIX: CMake targets are designed to be alterable by calling
 #   CMake in order to avoid target name clashes, via the use of
 #   MBEDTLS_TARGET_PREFIX. The value of this variable is prefixed to the
@@ -42,9 +38,6 @@ endif()
 # Set the project root directory.
 set(MBEDTLS_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
-option(USE_PKCS11_HELPER_LIBRARY "Build mbed TLS with the pkcs11-helper library." OFF)
-option(ENABLE_ZLIB_SUPPORT "Build mbed TLS with zlib library." OFF)
-
 option(ENABLE_PROGRAMS "Build mbed TLS programs." ON)
 
 option(UNSAFE_BUILD "Allow unsafe builds. These builds ARE NOT SECURE." OFF)
@@ -63,17 +56,6 @@ else()
 endif()
 
 # Warning string - created as a list for compatibility with CMake 2.8
-set(WARNING_BORDER "*******************************************************\n")
-set(NULL_ENTROPY_WARN_L1 "****  WARNING!  MBEDTLS_TEST_NULL_ENTROPY defined!\n")
-set(NULL_ENTROPY_WARN_L2 "****  THIS BUILD HAS NO DEFINED ENTROPY SOURCES\n")
-set(NULL_ENTROPY_WARN_L3 "****  AND IS *NOT* SUITABLE FOR PRODUCTION USE\n")
-
-set(NULL_ENTROPY_WARNING "${WARNING_BORDER}"
-                         "${NULL_ENTROPY_WARN_L1}"
-                         "${NULL_ENTROPY_WARN_L2}"
-                         "${NULL_ENTROPY_WARN_L3}"
-                         "${WARNING_BORDER}")
-
 set(CTR_DRBG_128_BIT_KEY_WARN_L1 "****  WARNING!  MBEDTLS_CTR_DRBG_USE_128_BIT_KEY defined!\n")
 set(CTR_DRBG_128_BIT_KEY_WARN_L2 "****  Using 128-bit keys for CTR_DRBG limits the security of generated\n")
 set(CTR_DRBG_128_BIT_KEY_WARN_L3 "****  keys and operations that use random values generated to 128-bit security\n")
@@ -106,26 +88,6 @@ if(MBEDTLS_PYTHON_EXECUTABLE)
         message(WARNING ${CTR_DRBG_128_BIT_KEY_WARNING})
     endif()
 
-    # If NULL Entropy is configured, display an appropriate warning
-    execute_process(COMMAND ${MBEDTLS_PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/config.py -f ${CMAKE_CURRENT_SOURCE_DIR}/include/mbedtls/config.h get MBEDTLS_TEST_NULL_ENTROPY
-                        RESULT_VARIABLE result)
-    if(${result} EQUAL 0)
-        message(WARNING ${NULL_ENTROPY_WARNING})
-
-        if(NOT UNSAFE_BUILD)
-            message(FATAL_ERROR "\
-\n\
-Warning! You have enabled MBEDTLS_TEST_NULL_ENTROPY. \
-This option is not safe for production use and negates all security \
-It is intended for development use only. \
-\n\
-To confirm you want to build with this option, re-run cmake with the \
-option: \n\
-  cmake -DUNSAFE_BUILD=ON ")
-
-            return()
-        endif()
-    endif()
 endif()
 
 # If this is the root project add longer list of available CMAKE_BUILD_TYPE values
@@ -255,14 +217,6 @@ if(LIB_INSTALL_DIR)
 else()
     set(LIB_INSTALL_DIR lib)
 endif()
-
-if(ENABLE_ZLIB_SUPPORT)
-    find_package(ZLIB)
-
-    if(ZLIB_FOUND)
-        include_directories(${ZLIB_INCLUDE_DIR})
-    endif(ZLIB_FOUND)
-endif(ENABLE_ZLIB_SUPPORT)
 
 add_subdirectory(include)
 
